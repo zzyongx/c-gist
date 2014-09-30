@@ -21,7 +21,6 @@ class Solution {
 public:
   /* 1: use the lower bit in point as flag */
   ListNode *ptrMarkMethod(ListNode *head) {
-
     int i = 0;
     ListNode *node = NULL;
     ListNode *p = head;
@@ -50,8 +49,6 @@ public:
    *    but we don't know where the cycle happens
    */
   bool reverseListMethod(ListNode *head) {
-    if (!head) return head;
-
     bool hasCycle = false;
     ListNode *thead = head;
     for (size_t i = 0; i < 2; ++i) {
@@ -70,10 +67,8 @@ public:
 
   /* 3: fast-slow ptr */
   ListNode *fastSlowPtrMethod(ListNode *head) {
-    if (!head) return head;
-
     /* one ptr move fast, one move slow,
-     *  if they meet again (first meet point is head), cycyle exists
+     * if they meet again (first meet point is head), cycyle exists
      */
     ListNode *fast = head, *slow = head;
     while (fast && fast->next) {
