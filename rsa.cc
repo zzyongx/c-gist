@@ -45,7 +45,7 @@ bool readfile(const std::string &f, std::vector<std::string> *l)
   fclose(fp);
   return true;
 }
-  
+
 bool public_encrypt(const std::string &pubkey, const std::string &data,
                     std::vector<std::string> *lines)
 {
@@ -157,7 +157,7 @@ std::string decode_base64(const std::string &str, bool nl = false)
   bio = BIO_new_fp(stream, BIO_NOCLOSE);
   bio = BIO_push(b64, bio);
   //Do not use newlines to flush buffer  
-  BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+  if (!nl) BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
   int len = BIO_read(bio, (void*) data.data(), data.size());
   data.resize(len);
   
@@ -166,14 +166,96 @@ std::string decode_base64(const std::string &str, bool nl = false)
 
   return data;
 }
+bool test()
+{
+  FILE *fp = fopen("/tmp/rsa/priv.pem", "r");
+  if (!fp) {
+    std::cout << "open /tmp/rsa/priv.pem failed\n";
+    return false;
+  }
+  
+  RSA *rsa = NULL;
+  rsa = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+  if (rsa) {
+    std::cout << "PEM_read_RSAPrivateKey ok\n";
+  } else {
+    std::cout << "PEM_read_RSAPrivateKey failed\n";
+    fclose(fp);
+    return false;
+  }
 
+  fclose(fp);
+  
+  std::string str, data;
+  if (!readfile("/tmp/rsa/encrypted.txt", &data)) {
+    std::cout << "readfile encrypted error\n";
+    RSA_free(rsa);
+    return false;
+  }
+
+  size_t pos = 0;
+  int nchunk = RSA_size(rsa);
+
+  char *buffer = new char[nchunk * 2];
+  char *from = buffer;
+  char *to = buffer + nchunk;
+
+  int flen, tlen;
+
+  for ( ;; ) {
+    size_t nlpos = data.find('\n', pos);
+    if (nlpos == pos) {
+      continue;
+    } else if (nlpos == std::string::npos) {
+      nlpos = data.size();
+    }
+
+    fp = fmemopen((void *) (data.c_str() + pos), nlpos - pos, "r");
+
+    BIO *b64 = BIO_new(BIO_f_base64());
+    BIO *bio = BIO_new_fp(fp, BIO_NOCLOSE);
+    bio = BIO_push(b64, bio);
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+
+    flen = BIO_read(bio, (void *)from, nchunk);
+    
+    if (flen > 0) {
+      tlen = RSA_private_decrypt(flen, (unsigned char *) from,
+                                 (unsigned char *) to, rsa, RSA_PKCS1_OAEP_PADDING);
+      if (tlen == -1) {
+        std::cout << "decrypt error";
+        return false;
+      }
+
+      str.append(to, tlen);
+    } else {
+      std::cout << "decode_base64 error " << flen << "\n";
+      return false;
+    }
+
+    BIO_free_all(bio);
+    fclose(fp);
+
+    if (nlpos + 1 == data.size() || nlpos == data.size()) break;
+    else pos = nlpos + 1;
+  }
+
+  std::cout << encode_base64(str, true) << "\n";
+  
+  delete[] buffer;
+  RSA_free(rsa);
+  return true;
+}  
+  
 int main()
 {
   ERR_load_crypto_strings();
   ERR_load_BIO_strings();
-  OpenSSL_add_all_algorithms();  
+  OpenSSL_add_all_algorithms();
 
-  RAND_load_file("/dev/urandom", 256);
+  // RAND_load_file("/dev/urandom", 256);
+
+  test();
   
   std::string prikey;
   if (!readfile("/tmp/rsa/priv.pem", &prikey)) return EXIT_FAILURE;
@@ -188,6 +270,12 @@ int main()
     std::cout << "baes64 encode/decode error\n";
     return EXIT_FAILURE;
   }
+
+  if (decode_base64(encode_base64(prikey, true), true) != prikey) {
+    std::cout << "baes64 encode/decode with line error\n";
+    return EXIT_FAILURE;
+  }
+
 
   std::string o;
   std::vector<std::string> lines;
@@ -212,6 +300,19 @@ int main()
   std::cout << pem.size() << "\n";
   std::cout << pem << std::endl;
 
-  std::cout << "XXXXXXXXX";
+  pubkey.clear();
+  if (!readfile("/tmp/jobworker.pub.pem", &pubkey)) return EXIT_FAILURE;
+
+  data.clear();
+  if (!readfile("/tmp/jobworker.pem", &data)) return EXIT_FAILURE;
+
+  lines.clear();
+  if (!public_encrypt(pubkey, decode_base64(data, true), &lines)) return EXIT_FAILURE;
+
+  for (size_t i = 0; i < lines.size(); ++i) {
+    std::cout << encode_base64(lines[i]) << "\n";
+  }
+  std::cout << "HERE";
+
   return EXIT_SUCCESS;
 }
