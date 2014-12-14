@@ -1,0 +1,131 @@
+;; Object c-gist/
+;; SEMANTICDB Tags save file
+(semanticdb-project-database-file "c-gist/"
+  :tables
+  (list
+    (semanticdb-table "rsa.cc"
+      :major-mode 'c++-mode
+      :tags 
+        '( ("openssl/pem.h" include (:system-flag t) nil [1 25])
+            ("openssl/ssl.h" include (:system-flag t) nil [26 50])
+            ("openssl/rsa.h" include (:system-flag t) nil [51 75])
+            ("openssl/bio.h" include (:system-flag t) nil [76 100])
+            ("openssl/evp.h" include (:system-flag t) nil [101 125])
+            ("openssl/err.h" include (:system-flag t) nil [126 150])
+            ("openssl/rand.h" include (:system-flag t) nil [151 176])
+            ("cstdio" include (:system-flag t) nil [177 194])
+            ("cstring" include (:system-flag t) nil [195 213])
+            ("cmath" include (:system-flag t) nil [214 230])
+            ("iostream" include (:system-flag t) nil [231 250])
+            ("string" include (:system-flag t) nil [251 268])
+            ("vector" include (:system-flag t) nil [269 286])
+            ("readfile" function
+               (:arguments 
+                  ( ("f" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [302 323])
+                    ("c" variable
+                       (:pointer 1
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [324 339]))                  
+                :type "bool")
+                nil [288 555])
+            ("readfile" function
+               (:arguments 
+                  ( ("f" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [571 592])
+                    ("l" variable
+                       (:pointer 1
+                        :type ("std::vector" type
+                             (:template-specifier 
+                                ( ("std::string" type nil nil nil))                                
+                              :type "class")
+                              nil nil))
+                        (reparse-symbol arg-sub-list) [593 621]))                  
+                :type "bool")
+                nil [557 862])
+            ("public_encrypt" function
+               (:arguments 
+                  ( ("pubkey" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [884 910])
+                    ("data" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [911 935])
+                    ("lines" variable
+                       (:pointer 1
+                        :type ("std::vector" type
+                             (:template-specifier 
+                                ( ("std::string" type nil nil nil))                                
+                              :type "class")
+                              nil nil))
+                        (reparse-symbol arg-sub-list) [956 988]))                  
+                :type "bool")
+                nil [864 1892])
+            ("private_decrypt" function
+               (:arguments 
+                  ( ("prikey" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [1915 1941])
+                    ("lines" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::vector" type
+                             (:template-specifier 
+                                ( ("std::string" type nil nil nil))                                
+                              :type "class")
+                              nil nil))
+                        (reparse-symbol arg-sub-list) [1942 1980])
+                    ("data" variable
+                       (:pointer 1
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [2002 2020]))                  
+                :type "bool")
+                nil [1894 2780])
+            ("encode_base64" function
+               (:arguments 
+                  ( ("data" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [2808 2832])
+                    ("nl" variable
+                       (:default-value "false"
+                        :type "bool")
+                        (reparse-symbol arg-sub-list) [2833 2848]))                  
+                :type ("std::string" type (:type "class") nil nil))
+                nil [2782 3366])
+            ("decode_base64" function
+               (:arguments 
+                  ( ("str" variable
+                       (:reference 1
+                        :constant-flag t
+                        :type ("std::string" type (:type "class") nil nil))
+                        (reparse-symbol arg-sub-list) [3394 3417])
+                    ("nl" variable
+                       (:default-value "false"
+                        :type "bool")
+                        (reparse-symbol arg-sub-list) [3418 3433]))                  
+                :type ("std::string" type (:type "class") nil nil))
+                nil [3368 3900])
+            ("test" function (:type "bool") nil [3901 5719])
+            ("main" function (:type "int") nil [5725 7522]))          
+      :file "rsa.cc"
+      :pointmax 7523
+      :fsize 7522
+      :lastmodtime '(21644 5789 951529 627000)
+      :unmatched-syntax nil))
+  :file "!home!zzyong!github!c-gist!semantic.cache"
+  :semantic-tag-version "2.0"
+  :semanticdb-version "2.2")

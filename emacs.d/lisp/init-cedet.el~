@@ -1,0 +1,7 @@
+(require-package 'cedet)
+(semantic-load-enable-minimun-features)
+(semantic-load-enable-code-helpers)
+(provide 'init-cedet)
+
+
+
