@@ -34,7 +34,6 @@ static const struct luaL_reg functions[] = {
 
 int luaopen_counter(lua_State *L)
 {
-  lua_newtable(L);
   luaL_register(L, "counter", functions);
   return 1;
 }
