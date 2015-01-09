@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include <wand/magick_wand.h>
 
 /* gcc -o imagick -Werror -Wall -g imagick-text-effect.c -I/usr/include/ImageMagick -lMagickWand */
@@ -29,6 +30,7 @@ int main()
   MagickWand  *mw, *mw2;
   DrawingWand *dw;
   PixelWand   *pw;
+  MagickBooleanType mbt;
 
   mw = NewMagickWand();
   dw = NewDrawingWand();  
@@ -40,16 +42,24 @@ int main()
   // 72px white font
   PixelSetColor(pw, "white");
   DrawSetFillColor(dw, pw);
-  DrawSetFont(dw, "Verdana-Bold-Italic");
+  mbt = DrawSetFont(dw, "/usr/share/fonts/simfang.ttf");  // full name
+  assert(mbt == MagickTrue);
   DrawSetFontSize(dw, 72);
 
   // black outline
   PixelSetColor(pw, "black");
   DrawSetStrokeColor(dw, pw);
 
+  char buf[128] = "Magick";
+  FILE *fp = fopen("/tmp/utf8.txt", "r");
+  if (fp) {
+    fgets(buf, sizeof(buf)-1, fp);
+    fclose(fp);
+  }
+
   // draw the text
   DrawSetTextAntialias(dw, MagickTrue);
-  DrawAnnotation(dw, 50, 75, (unsigned char *) "Magick");
+  DrawAnnotation(dw, 50, 75, (unsigned char *) buf);
   MagickDrawImage(mw, dw);
 
   MagickWriteImage(mw, IDIR ".0.png");
@@ -84,7 +94,7 @@ int main()
   PixelSetColor(pw, "lightblue");
   MagickNewImage(mw, 400, 150, pw);
 
-  DrawSetFont(dw, "Verdana-Bold-Italic");
+  DrawSetFont(dw, "FangSong");
   DrawSetFontSize(dw, 72);
   DrawAnnotation(dw, 28, 68, (unsigned char *) "Magick");
 
