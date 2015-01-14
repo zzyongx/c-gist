@@ -46,11 +46,11 @@ static void read_csv(const char *f, std::vector<Mat> &images, std::vector<int> &
     if (!path.empty() && !label.empty()) {
       int lab = atoi(label.c_str());
       if (std::find(testLabels.begin(), testLabels.end(), lab) == testLabels.end()) {
-	testImages.push_back(imread(path, CV_LOAD_IMAGE_GRAYSCALE));
-	testLabels.push_back(lab);
+        testImages.push_back(imread(path, CV_LOAD_IMAGE_GRAYSCALE));
+        testLabels.push_back(lab);
       } else {
-	images.push_back(imread(path, CV_LOAD_IMAGE_GRAYSCALE));
-	labels.push_back(lab);
+        images.push_back(imread(path, CV_LOAD_IMAGE_GRAYSCALE));
+        labels.push_back(lab);
       }
     }
   }

@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $hostf = shift or help();
+my $cmd   = shift or help();
+my $regex = shift;
+
+open(my $fh, "<", $hostf) or help();
+my @hosts;
+if ($regex) {
+  @hosts = grep { /$regex/ } <$fh>;
+} else {
+  @hosts = <$fh>;
+}
+
+foreach my $host (@hosts) {
+  chomp $host;
+  next unless ($host ne "");
+
+  print "\@$host run $cmd\n";
+  print "=" x 80, "\n";
+  my $cmd = "ssh root\@$host '$cmd'";
+  system($cmd);
+  print "=" x 80, "\n";
+}
+
+sub help {
+  print "usage: $0 hostsfile cmd [regex]\n";
+  exit(0);
+}

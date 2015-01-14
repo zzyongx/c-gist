@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $hostf = shift or help();
+my $srcf  = shift or help();
+my $dstf  = shift or help();
+my $regex = shift;
+
+open(my $fh, "<", $hostf) or help();
+my @hosts;
+if ($regex) {
+  @hosts = grep { /$regex/ } <$fh>;
+} else {
+  @hosts = <$fh>;
+}
+
+foreach my $host (@hosts) {
+  chomp $host;
+  next unless ($host ne "");
+
+  my $cmd = "scp $srcf root\@$host:$dstf";
+  print "=" x 80, "\n";
+  print $cmd, "\n";
+  system($cmd);
+  print "=" x 80, "\n";
+}
+
+sub help {
+  print "usage: $0 hostsfile srcfile dstfile [regex]\n";
+  exit(0);
+}
