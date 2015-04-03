@@ -1,6 +1,5 @@
-## 云图推介
-### 郑志勇
-### zhengzhiyong@sogou-inc.com
+## 云图2.0介绍会
+* 郑志勇 技术工程部-平台架构部
 
 ## 云图是什么
 1. 抓取其它网站的图片
@@ -27,25 +26,19 @@
 ## BaiDu apistore
 ![](images/baidu-apistore.png)
 
-## Sae Paas
-![](images/sae-paas.png)
-
 ## AWS Iaas/Paas
 ![](images/aws-product.jpg)
 
 ## instagram
 11年的时候，7个人的团队，用户数1400万，图片超过1.5一张
 
-
 ![](images/instagram.png)
-
-## dropbox
-![](images/dropbox.jpg)
 
 ## 云图是SaaS
 1. 支持部门向服务部门转变
 2. 诸位是甲方
-3. SaaS 意味着无限可能
+3. 持续改进，越来越稳定，越来越专业
+4. 倾听诸位的需求
 
 ## 云图的功能
 1. 抓图，突破防盗链，效率，CDN
@@ -76,9 +69,17 @@
 * [级联操作 /crop/h/0.5/xy/face/resize/w/400/t/2/watermark/t/sogou/c/red/retype/q/30](http://10.136.110.179:8080/v2/thumb/debug/true/appid/101490007/url/http%3A%2F%2Fwww.shaimn.com%2Fuploads%2Fallimg%2F141201%2F1-141201230436.jpg/cls/gd/crop/h/0.5/xy/face/resize/w/400/t/2/watermark/t/sogou/c/red/retype/q/30)
 * [调试选项 /debug/1](http://10.136.110.179:8080/v2/thumb/debug/true/appid/101490007/url/http%3A%2F%2Fwww.shaimn.com%2Fuploads%2Fallimg%2F141201%2F1-141201230436.jpg/cls/gd/retype/qi/30)
 
+## 新的申请系统
+* ![](images/roc-ui.png)
+
 ## 未来
 1. 云图不止于此
 2. 更多*aaS值得期待
-3. 我们是一伙儿的
-4. 未来仰仗诸位的支持和理解
+3. 未来仰仗诸位的支持和理解
+4. 欢迎推荐人才来云图
+
+## 更多交流方式
+1. 小p公众号 搜狗TED ![小p](http://xiaop.sogou-inc.com/css/images/qr-ios.png)
+2. 邮件组 yuntu_users@sogou-inc.com
+3. qq群 387738436
 
