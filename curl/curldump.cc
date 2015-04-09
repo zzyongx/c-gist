@@ -2,14 +2,20 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <vector>
 #include <string>
+#include <map>
 #include <algorithm>
 #include <curl/curl.h>
 
 // g++ -o curldump curldump.cc -Wall -lcurl
 
-bool curlGet(const std::string &qdb, const std::string &key, std::string *data);
-bool curlPut(const std::string &sos, const std::string &key, const std::string &data);
+typedef std::vector<std::string> StringList;
+typedef std::map<std::string, std::string> StringMap;
+static const size_t NP = 100;
+
+bool curlmGet(const std::string &qdb, StringList *keys, StringMap *items);
+bool curlmPut(const std::string &sos, StringMap *items);
 
 int main(int argc, char *argv[])
 {
@@ -23,22 +29,29 @@ int main(int argc, char *argv[])
 
   char buffer[128];
   size_t nbuffer = 128;
+
+  StringList keys;
+  StringMap  items;
   
   while (fgets(buffer, nbuffer, stdin)) {
     size_t len = strlen(buffer);
-    assert(buffer[len-1] == '\n');
+    assert(len >= 2 && buffer[len-1] == '\n');
+
+    if (keys.size() >= NP) {
+      if (!curlmGet(qdb, &keys, &items) || !curlmPut(sos, &items)) {
+        return EXIT_FAILURE;
+      }
+    }
     
-    std::string key(buffer, len-1);
-    std::string data;
-    if (!curlGet(qdb, key, &data)) {
-      fprintf(stderr, "qdb get error %s", buffer);
-      return EXIT_FAILURE;
-    }
-    if (!curlPut(sos, key, data)) {
-      fprintf(stderr, "sos put error %s", buffer);
-      return EXIT_FAILURE;
-    }
+    keys.push_back(std::string(buffer, len-1));
   }
+
+  StringList datas;  
+  if (!curlmGet(qdb, &keys, &items) || !curlmPut(sos, &items)) {
+    return EXIT_FAILURE;
+  }
+
+  printf("OK\n");
   return EXIT_SUCCESS;
 }
 
@@ -49,65 +62,165 @@ size_t curlGetData(void *ptr, size_t size, size_t nmemb, void *data)
   return size * nmemb;
 }
 
-bool curlGet(const std::string &qdb, const std::string &key, std::string *data)
+bool curlmGet(const std::string &qdb, StringList *keys, StringMap *items)
 {
-  std::string url = qdb + "?key=" + key;
+  int running;
+  CURLMcode mc;
+  bool ret = true;
+  size_t finished = 0;
   
-  CURL *curl = curl_easy_init();
-  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlGetData);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
+  CURLM *multi = curl_multi_init();
+  StringList pkeys(*keys);
+  StringList datas(keys->size());
 
-  CURLcode rc = curl_easy_perform(curl);
-  if (rc != CURLE_OK) {
-    curl_easy_cleanup(curl);
-    return false;
+  for (size_t i = 0; i < keys->size(); ++i) {
+    std::string url = qdb + "?key=" + keys->at(i);
+    items->insert(std::make_pair(keys->at(i), ""));
+    CURL *curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlGetData);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &(datas[i]));
+    curl_easy_setopt(curl, CURLOPT_PRIVATE, (void *)i);
+
+    curl_multi_add_handle(multi, curl);
   }
-  long code;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
 
-  curl_easy_cleanup(curl);
-  return code == 200;
+  keys->clear();
+  curl_multi_perform(multi, &running);
+
+  do {
+    int numfds;
+
+    mc = curl_multi_wait(multi, NULL, 0, 5000, &numfds);
+    if (mc != CURLM_OK) {
+      fprintf(stderr, "curl_multi_wait %s\n", curl_multi_strerror(mc));
+      ret = false;
+    }
+    /* use still_running to judge while loop has problem */
+    mc = curl_multi_perform(multi, &running);
+    if (mc != CURLM_OK) {
+      fprintf(stderr, "curl_multi_perform %s\n", curl_multi_strerror(mc));
+      ret = false;
+    }
+
+    CURLMsg *msg;
+    int left;
+    while ((msg = curl_multi_info_read(multi, &left))) {
+      if (msg->msg != CURLMSG_DONE) continue;
+
+      CURL *curl = msg->easy_handle;
+      long code;
+      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+      size_t idx;
+      curl_easy_getinfo(curl, CURLINFO_PRIVATE, &idx);
+      
+      if (code == 200) {
+        items->insert(std::make_pair(pkeys[idx], datas[idx]));
+      } else {
+        char *url;
+        curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+        fprintf(stderr, "%ld %s %s\n", code, pkeys[idx].c_str(), url);
+        if (code == 0) keys->push_back(pkeys[idx]);
+        else ret = false;
+      }
+      finished++;
+      curl_multi_remove_handle(multi, curl);
+      curl_easy_cleanup(curl);
+    }
+  } while (finished < pkeys.size());
+
+  curl_multi_cleanup(multi);
+  return ret;
 }
 
 struct CurlPutDataCtx {
-  const std::string *data;
+  std::string key;
+  std::string data;
   size_t pos;
+  CurlPutDataCtx() {}
+  CurlPutDataCtx(const std::string &k, const std::string &d)
+    : key(k), data(d), pos(0) {}
 };
 
 size_t curlPutData(void *ptr, size_t size, size_t nmemb, void *data)
 {
   CurlPutDataCtx *ctx = (CurlPutDataCtx *) data;
-  size_t min = std::min(size * nmemb, ctx->data->size() - ctx->pos);
-  memcpy(ptr, ctx->data->c_str() + ctx->pos, min);
+  size_t min = std::min(size * nmemb, ctx->data.size() - ctx->pos);
+  memcpy(ptr, ctx->data.c_str() + ctx->pos, min);
   ctx->pos += min;
   return min;
 }
 
-bool curlPut(const std::string &sos, const std::string &key, const std::string &data)
+bool curlmPut(const std::string &sos, StringMap *items)
 {
-  size_t idx = key.find('.');
-  assert(idx != std::string::npos);
+  int running;
+  CURLMcode mc;
+  bool ret = true;
+  size_t finished = 0;
+  
+  CURLM *multi = curl_multi_init();
+  std::vector<CurlPutDataCtx> ctxs;
+  ctxs.resize(items->size());
 
-  std::string url = sos + "/" + key.substr(idx + 1) + "/" + key;
-  CurlPutDataCtx ctx = { &data, 0 };
+  size_t idx = 0;
+  for (StringMap::iterator ite = items->begin(); ite != items->end(); ++ite, ++idx) {
+    size_t pos = ite->first.find('.');
+    assert(pos != std::string::npos);
 
-  CURL *curl = curl_easy_init();
-  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-  curl_easy_setopt(curl, CURLOPT_PUT, 1L);
-  curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) data.size());
-  curl_easy_setopt(curl, CURLOPT_READFUNCTION, curlPutData);
-  curl_easy_setopt(curl, CURLOPT_READDATA, &ctx);
+    std::string url = sos + "/" + ite->first.substr(pos + 1) + "/" + ite->first;
+    ctxs[idx] = CurlPutDataCtx(ite->first, ite->second);
 
-  CURLcode rc = curl_easy_perform(curl);
-  if (rc != CURLE_OK) {
-    curl_easy_cleanup(curl);
-    return false;
+    CURL *curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_PUT, 1L);
+    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) ctxs[idx].data.size());
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, curlPutData);
+    curl_easy_setopt(curl, CURLOPT_READDATA, &ctxs[idx]);
+    curl_easy_setopt(curl, CURLOPT_PRIVATE, (void *) idx);
+
+    curl_multi_add_handle(multi, curl);
   }
 
-  long code;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+  curl_multi_perform(multi, &running);
 
-  curl_easy_cleanup(curl);
-  return code == 200;
+  do {
+    int numfds;
+
+    mc = curl_multi_wait(multi, NULL, 0, 5000, &numfds);
+    if (mc != CURLM_OK) {
+      fprintf(stderr, "curl_multi_wait %s\n", curl_multi_strerror(mc));
+      ret = false;
+    }
+    mc = curl_multi_perform(multi, &running);
+    if (mc != CURLM_OK) {
+      fprintf(stderr, "curl_multi_perform %s\n", curl_multi_strerror(mc));
+      ret = false;
+    }
+
+    CURLMsg *msg;
+    int left;
+    while ((msg = curl_multi_info_read(multi, &left))) {
+      if (msg->msg != CURLMSG_DONE) continue;
+
+      CURL *curl = msg->easy_handle;
+      long code;
+      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+      curl_easy_getinfo(curl, CURLINFO_PRIVATE, &idx);
+
+      if (code == 200) {
+        items->erase(ctxs[idx].key);
+      } else {
+        char *url;
+        curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+        fprintf(stderr, "%ld %s\n", code, url);
+        if (code != 0) ret = false;
+      }
+      finished++;
+      curl_multi_remove_handle(multi, curl);
+      curl_easy_cleanup(curl);
+    }
+  } while (finished < ctxs.size());
+
+  curl_multi_cleanup(multi);
+  return ret;
 }

@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Errno qw(:POSIX);
+use IO::Socket::INET;
+use Data::Dumper;
+
+my %config = getconf("/etc/rootproxy.conf");
+
+my $listen = IO::Socket::INET->new(
+  Listen    => 1024,
+  LocalPort => 9191,
+  ReuseAddr => 1,
+  Proto     => 'tcp',
+);
+
+$SIG{CHLD} = 'IGNORE';
+$| = 1;
+
+while ((my $client = $listen->accept())) {
+  my $pid = fork();
+  if ($pid == 0) {
+    receive($client);
+    exit(0);
+  }
+}
+
+sub receive {
+  my $client = shift;
+  my $cmdnam = <$client>;
+  chomp($cmdnam);
+  my $cmd = $config{$cmdnam};
+  unless ($cmd) {
+    $client->syswrite("unknow $cmdnam");
+    close($client);
+    return;
+  }
+
+  close(STDERR);
+  close(STDOUT);
+  open(STDOUT, ">&", $client->fileno);
+  open(STDERR, ">&", $client->fileno);
+  system($cmd);
+
+  close($client);
+}
+
+sub getconf {
+  my $f = shift;
+  open(my $fh, "<", $f) or die "$f open $!";
+  my %config = map {chomp; my ($k, $v) = split /\s+/, $_, 2; $k => $v} <$fh>;
+  close($fh);
+  return %config;
+}
