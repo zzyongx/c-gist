@@ -1,3 +1,7 @@
+;; usage
+;; ln -s PATH/.emacs.d ~/.emacs.d
+;; mkdir ~/.emcas/site-lisp
+
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'init-benchmarking)
@@ -17,6 +21,10 @@
 (require 'init-markdown)
 (require 'init-javascript)
 (require 'init-lua)
+(require 'init-scala)
+(require 'init-php)
+(require 'init-cc)
+(require 'init-perl)
 
 ;; line number
 (global-linum-mode t)
@@ -34,6 +42,10 @@
 ;; cancel backup file, temp file
 (setq make-backup-file nil)
 (setq-default make-backup-files nil)
+
+;; save place
+(require 'saveplace)
+(setq-default save-place t)
 
 ;; imenu
 (global-set-key [(control c)(i)] 'imenu)
@@ -60,8 +72,23 @@
 ;; C-x r o   insert rect spac
 ;; C-x r t *string* <RET> replace rect
 
+;; C-u C-@ back to last position
+;; C-x o switch between buffer
+
 ;; move around window
 (global-set-key [M-left]  'windmove-left)
 (global-set-key [M-right] 'windmove-right)
 (global-set-key [M-up]    'windmove-up)
 (global-set-key [M-down]  'windmove-down)
+
+;; shell mode
+(autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on t)
+
+;; sh-mode
+(add-hook 'sh-mode-hook
+          '(lambda()
+             (setq sh-basic-offset 2)
+             (setq sh-indentation 2)
+             )
+          )
