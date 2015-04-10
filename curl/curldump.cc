@@ -46,7 +46,6 @@ int main(int argc, char *argv[])
     keys.push_back(std::string(buffer, len-1));
   }
 
-  StringList datas;  
   if (!curlmGet(qdb, &keys, &items) || !curlmPut(sos, &items)) {
     return EXIT_FAILURE;
   }
@@ -75,7 +74,6 @@ bool curlmGet(const std::string &qdb, StringList *keys, StringMap *items)
 
   for (size_t i = 0; i < keys->size(); ++i) {
     std::string url = qdb + "?key=" + keys->at(i);
-    items->insert(std::make_pair(keys->at(i), ""));
     CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlGetData);
@@ -115,11 +113,12 @@ bool curlmGet(const std::string &qdb, StringList *keys, StringMap *items)
       curl_easy_getinfo(curl, CURLINFO_PRIVATE, &idx);
       
       if (code == 200) {
+        // fprintf(stderr, "%s %d\n", pkeys[idx].c_str(), (int) datas[idx].size());
         items->insert(std::make_pair(pkeys[idx], datas[idx]));
       } else {
         char *url;
         curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
-        fprintf(stderr, "%ld %s %s\n", code, pkeys[idx].c_str(), url);
+        fprintf(stderr, "GET %ld %s %s\n", code, pkeys[idx].c_str(), url);
         if (code == 0) keys->push_back(pkeys[idx]);
         else ret = false;
       }
@@ -169,6 +168,7 @@ bool curlmPut(const std::string &sos, StringMap *items)
 
     std::string url = sos + "/" + ite->first.substr(pos + 1) + "/" + ite->first;
     ctxs[idx] = CurlPutDataCtx(ite->first, ite->second);
+    // fprintf(stderr, "%s %d\n", ite->first.c_str(), (int) ite->second.size());
 
     CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -212,7 +212,7 @@ bool curlmPut(const std::string &sos, StringMap *items)
       } else {
         char *url;
         curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
-        fprintf(stderr, "%ld %s\n", code, url);
+        fprintf(stderr, "PUT %ld %s\n", code, url);
         if (code != 0) ret = false;
       }
       finished++;
