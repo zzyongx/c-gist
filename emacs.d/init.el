@@ -19,12 +19,12 @@
 ;;(require 'init-cedet)
 (require 'init-ecb)
 (require 'init-markdown)
+(require 'init-cc)
+(require 'init-perl)
 (require 'init-javascript)
 (require 'init-lua)
 (require 'init-scala)
 (require 'init-php)
-(require 'init-cc)
-(require 'init-perl)
 
 ;; line number
 (global-linum-mode t)

@@ -120,7 +120,7 @@ bool curlmGet(const std::string &qdb, StringList *keys, StringMap *items)
         curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
         fprintf(stderr, "GET %ld %s %s\n", code, pkeys[idx].c_str(), url);
         if (code == 0) keys->push_back(pkeys[idx]);
-        else ret = false;
+        else if (code != 404) return false;
       }
       finished++;
       curl_multi_remove_handle(multi, curl);

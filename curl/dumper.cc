@@ -20,12 +20,15 @@
 #define DEFAULT_CURSOR_TYPE double_buffer_cursor
 #define DEFAULT_OFFSET      0
 
+#define MAX_NP 500
+
 struct RoutineData {
   std::set<std::string> appids;
   std::string sos;
   
   int         accept;
   int         efd;
+  int         num;
   CURLM      *multi;
   bool        quit;
 };
@@ -57,6 +60,7 @@ int main(int argc, char *argv[])
   RoutineData r;
   r.sos   = argv[2];
   r.accept = fd[0];
+  r.num    = 0;
   r.quit   = false;
 
   for (int i = 3; i < argc; ++i) {  
@@ -165,6 +169,8 @@ bool newTask(RoutineData *r)
   bool ret = true;
   
   while (true) {
+    if (r->num > MAX_NP) return true;
+    
     uint32_t bytes;
     ioctl(r->accept, FIONREAD, &bytes);
     if (bytes == 0) break;
@@ -204,6 +210,7 @@ bool newTask(RoutineData *r)
       ret = false;
       break;
     }
+    r->num++;
     int running;
     curl_multi_socket_action(r->multi, CURL_SOCKET_TIMEOUT, 0, &running);
   }
@@ -231,6 +238,7 @@ bool checkMultiInfo(RoutineData *r)
     curl_easy_getinfo(easy, CURLINFO_PRIVATE, &req);
     taskFinish(req);
     curl_easy_cleanup(easy);
+    r->num--;
   }
   return true;
 }
