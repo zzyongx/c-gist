@@ -25,6 +25,11 @@
 (require 'init-lua)
 (require 'init-scala)
 (require 'init-php)
+(require 'init-haskell)
+
+(require 'init-org)
+(require 'init-ox-reveal)
+(require 'init-dot)
 
 ;; line number
 (global-linum-mode t)
@@ -91,4 +96,5 @@
              (setq sh-basic-offset 2)
              (setq sh-indentation 2)
              )
-          )
+          )  
+  
