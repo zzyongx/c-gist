@@ -5,5 +5,7 @@
               (ggtags-mode 1))))
 (provide 'init-ggtags)
 
+;; should install gnu global first
+
 ;; M-.     skip to definition
 ;; C-c M-p skip to last Mark

@@ -18,6 +18,7 @@
 (require 'init-auto-complete)
 (require 'init-cedet)
 (require 'init-ecb)
+(require 'init-yasnippet)
 (require 'init-markdown)
 (require 'init-cc)
 (require 'init-perl)
@@ -32,15 +33,10 @@
 (require 'init-dot)
 
 ;; java
-(require 'init-groovy)
-(require 'init-malabar)
+(require 'init-jdee)
 
 ;; IDE
 (require 'init-ggtags)
-;;(require-package 'helm-config)
-;;(require-package 'helm-grep)
-;;(require 'setup-helm)
-;;(require 'setup-helm-gtags)
 
 ;; line number
 (global-linum-mode t)
@@ -117,6 +113,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(ecb-options-version "2.40"))
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -124,3 +121,4 @@
  ;; If there is more than one, they won't work right.
  '(font-lock-function-name-face ((t (:foreground "blue" :weight bold))))
  '(which-func ((t (:foreground "magenta")))))
+(put 'erase-buffer 'disabled nil)

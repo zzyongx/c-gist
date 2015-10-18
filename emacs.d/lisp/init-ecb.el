@@ -1,13 +1,14 @@
 (require-package 'ecb)
-(require-package 'ecb-autoloads)
 
 (custom-set-variables
  '(ecb-options-version "2.40"))
 
 (setq ecb-layout-name "left15")
 (setq ecb-source-in-directories-buffer 'always)
+(setq ecb-use-speedbar-instead-native-tree-buffer 'dir)
 
 (setq ecb-auto-activate t)
+(setq ecb-tip-of-the-day nil)
 (provide 'init-ecb)
 
 ;; M-x ecb-activate
