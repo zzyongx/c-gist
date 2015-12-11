@@ -19,7 +19,6 @@
 (require 'init-cedet)
 (require 'init-ecb)
 (require 'init-yasnippet)
-(require 'init-markdown)
 (require 'init-cc)
 (require 'init-perl)
 (require 'init-javascript)
@@ -32,14 +31,12 @@
 (require 'init-ox-reveal)
 (require 'init-dot)
 
-;; java
-(require 'init-jdee)
-
 ;; IDE
 (require 'init-ggtags)
 
 ;; line number
 (global-linum-mode t)
+(setq column-number-mode t)
 
 ;; syntax on
 (global-font-lock-mode t)
@@ -105,14 +102,12 @@
              (setq sh-basic-offset 2)
              (setq sh-indentation 2)
              )
-          )  
-  
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(ecb-options-version "2.40"))
+          )
+
+(require-package 'sr-speedbar)
+(require 'sr-speedbar)
+(setq sr-speedbar-right-side nil)
+(global-set-key (kbd "M-s M-s") 'sr-speedbar-toggle)
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -122,3 +117,4 @@
  '(font-lock-function-name-face ((t (:foreground "blue" :weight bold))))
  '(which-func ((t (:foreground "magenta")))))
 (put 'erase-buffer 'disabled nil)
+

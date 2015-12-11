@@ -9,6 +9,7 @@
 
 (setq ecb-auto-activate t)
 (setq ecb-tip-of-the-day nil)
+(setq ecb-windows-width 0.20)
 (provide 'init-ecb)
 
 ;; M-x ecb-activate
