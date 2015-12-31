@@ -1,0 +1,4 @@
+{ endpoint => "http://m.firstpaas.com/zabbix/api_jsonrpc.php",
+  user     => "Admin",
+  passwd   => "zabbix"
+}

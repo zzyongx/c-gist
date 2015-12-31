@@ -1,8 +1,8 @@
 ;; cc
-(add-hook 'c-mode-common-hook
-          (lambda()
-            (setq indent-tabs-mode nil)
-            (set c-basic-offset 2)))
+;;(add-hook 'c-mode-common-hook
+;;          (lambda()
+;;            (setq indent-tabs-mode nil)
+;;            (set c-basic-offset 2)))
 
 (require 'cc-mode)
 (setq-default c-basic-offset 2 c-default-style "linux")

@@ -1,0 +1,514 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin;
+use JSON::RPC::Client;
+use JSON::PP qw(decode_json);
+use Data::Dumper;
+use Carp;
+
+use ZabbixApi;
+
+my $cmd = shift || "help";
+my @params = @ARGV;
+
+my $za = ZabbixApi->new(ZabbixApi::config("$FindBin::Bin/config"));
+
+my $func = $cmd;
+$func =~ s/\./_/g;
+
+if (defined &$func) {
+    my $sub = \&{$func};
+    $sub->(@params);
+} else {
+    help("$cmd not found");
+}
+
+# user
+
+sub user_login
+{
+    print "auth ", $za->user->login(), "\n";
+}
+
+# hostgroup
+
+sub hostgroup_create
+{
+    my $hg = shift or help("hostgroup.create perror");
+
+    my $resp = $za->hostgroup()->create($hg);
+    print "$hg create OK\n";
+    print "groupid ", $resp->{groupids}->[0], "\n";
+}
+
+sub hostgroup_exists
+{
+    my $hg = shift or help("hostgroup.exists perror");
+
+    my $e = $za->hostgroup()->exists($hg);
+    print $e ? "$hg EXIST\n": "$hg NOT EXIST\n";
+}
+
+sub hostgroup_get
+{
+    my $resp = $za->hostgroup()->get(@_);
+    print Dumper($resp);
+}
+
+sub hostgroup_delete
+{
+    my $resp = $za->hostgroup()->get(@_);
+    unless (@{$resp}) {
+        print "NOT FOUND\n";
+        return;
+    }
+
+    my @gids = map {$_->{groupid}} @{$resp};
+    my %dgids = map {$_ => 1} @{($za->hostgroup()->delete(@gids))->{groupids}};
+
+    foreach my $hg (@{$resp}) {
+        if (exists($dgids{$hg->{groupid}})) {
+            print $hg->{name}, " DELETED\n";
+        }
+    }
+}
+
+# template
+
+sub template_create
+{
+    my %params = hashize(@_);
+    unless (exists $params{name} && exists $params{group}) {
+        help("template.create perror");
+    }
+
+    my $resp = $za->hostgroup()->get($params{group});
+    unless (@{$resp}) {
+        print "Group ", $params{group}, " NOT FOUND\n";
+        return;
+    }
+
+    my $gids = $resp->[0];
+    $resp = $za->template()->create(name => $params{name}, groupid => $gids);
+
+    print $params{name}, " create OK\n";
+    print "templateid ", $resp->{templateids}->[0], "\n";
+}
+
+sub template_get
+{
+    my ($names, $filter) = filter(@_);
+    my $resp = $za->template()->get(@{$names});
+
+    if ($filter) {
+        $resp = [ map {
+            my $item = $_;
+            while (my ($k, $v) = each (%$item)) {
+                unless ($filter->{$k}) {
+                    delete $item->{$k};
+                }
+            }
+            $item;
+        } @{$resp} ];
+    }
+
+    print Dumper $resp;
+}
+
+sub template_exists
+{
+    my $tpl = shift;
+
+    my $resp = $za->template()->exists($tpl);
+    if ($resp) {
+        print "$tpl EXIST\n";
+    } else {
+        print "$tpl NOT EXIST\n";
+    }
+}
+
+sub template_delete
+{
+    my $resp = $za->template()->get(@_);
+    unless (@{$resp}) {
+        print "NOT FOUND\n";
+        return;
+    }
+
+    my @tids = map {$_->{templateid}} @{$resp};
+    my %dtids = map {$_ => 1} @{($za->template()->delete(@tids))->{templateids}};
+
+    foreach my $tpl (@{$resp}) {
+        if (exists($dtids{$tpl->{templateid}})) {
+            print $tpl->{name}, " DELETED\n";
+        }
+    }
+}
+
+# item
+sub item_create
+{
+    my %params = hashize(@_);
+    unless (exists $params{name} && exists $params{'key'} &&
+            exists $params{template} && exists $params{type} &&
+            exists $params{value_type}) {
+        help("item.create perror");
+    }
+
+    $params{delay} = 30 unless (exists $params{delay});
+    $params{units} = "" unless (exists $params{units});
+    $params{status} = 0 unless (exists $params{status});
+
+    my $resp = $za->template()->get($params{template});
+    unless (@{$resp}) {
+        print "Template ", $params{template}, " NOT FOUND\n";
+        return;
+    }
+
+    my $tid = $resp->[0]->{templateid};
+    $resp = $za->item()->create(name => $params{name}, key => $params{key},
+                                hostid => $tid, type => $params{type},
+                                value_type => $params{value_type},
+                                units => $params{units},
+                                delay => $params{delay},
+                                status => $params{status});
+    
+    print $params{name}, " create OK\n";
+    print "itemid ", $resp->{itemids}->[0], "\n";
+}
+
+sub item_update
+{
+    my %params = hashize(@_);
+    unless (exists $params{name} && exists $params{template}) {
+        help("item.update perror");
+    }
+
+    my $resp = $za->template()->get($params{template});
+    unless (@{$resp}) {
+        print "Template ", $params{template}, " NOT FOUND\n";
+        return;
+    }
+    my $tid = $resp->[0]->{templateid};
+
+    $resp = $za->item()->get($tid, $params{name});
+    unless (@{$resp}) {
+        print "Item ", $params{name}, " NOT FOUND\n";
+        return;
+    }
+    my $iid = $resp->[0]->{itemid};
+
+    $resp = $za->item()->update(name => $params{name}, iid => $iid,
+                                key => $params{key},
+                                hostid => $tid, type => $params{type},
+                                value_type => $params{value_type},
+                                units => $params{units},
+                                delay => $params{delay},
+                                status => $params{status});
+    print $params{name}, " update OK\n";
+}
+
+sub item_get
+{
+    my ($names, $filter) = filter(@_);
+    my %params = hashize(@{$names});
+
+    unless (exists $params{template}) {
+        help("item.get perror");
+    }
+    $params{items} = [] unless (exists $params{items});
+
+    my $resp = $za->template()->get($params{template});
+    unless (@{$resp}) {
+        print "Template ", $params{template}, " NOT FOUND\n";
+        return;
+    }
+    my $tid = $resp->[0]->{templateid};
+
+    $resp = $za->item()->get($tid, @{$params{items}});
+
+    if ($filter) {
+        $resp = [ map {
+            my $item = $_;
+            while (my ($k, $v) = each (%$item)) {
+                unless ($filter->{$k}) {
+                    delete $item->{$k};
+                }
+            }
+            $item;
+        } @{$resp} ];
+    }
+
+    print Dumper $resp;
+}
+
+sub trigger_get
+{
+    print Dumper $za->trigger()->get(@_);
+}
+
+# mediatype
+
+sub mediatype_create
+{
+    my %params = hashize(@_);
+
+    unless (exists $params{name} && exists $params{type}) {
+        help("mediatype.create perror");
+    }
+    $params{status} = 0 unless(exists $params{status});
+
+    my $resp = $za->mediatype()->create(name => $params{name},
+        type => $params{type}, status => $params{status},
+        smtp_server => $params{smtp_server},
+        smtp_helo   => $params{smtp_helo},
+        smtp_email  => $params{smtp_email},
+        script => $params{script}, gsm_modem => $params{gsm_modem});
+
+    print $params{name}, " create OK\n";
+    print "mediatypeid ", $resp->{mediatypeids}->[0], "\n";
+}
+
+sub mediatype_get
+{
+    print Dumper $za->mediatype()->get(@_);
+}
+
+# usergroup
+
+sub usergroup_rights
+{
+    my %params = @_;
+    my @rights;
+
+    for (my $i = 0; $i < 100; $i++) {
+        if (exists $params{"hostgroup_$i"}) {
+            my $resp = $za->hostgroup()->get($params{"hostgroup_$i"});
+            if (@{$resp}) {
+                my $id = $resp->[0]->{groupid};
+                my $perm = exists $params{"permission_$i"} ?
+                            $params{"permission_$i"} : 3;
+                push(@rights, {id => $id, permission => $perm});
+            }
+        } else {
+            last;
+        }
+    }
+
+    return @rights;
+}
+
+sub usergroup_create
+{
+    my %params = hashize(@_);
+
+    unless (exists $params{usergroup}) {
+        help("usergroup.create perror");
+    }
+    
+    my @rights = usergroup_rights(%params); 
+    $params{users_status} = 0 unless (exists $params{users_status});
+
+    my $resp = $za->usergroup()->create(name => $params{usergroup},
+        rights => \@rights, status => $params{users_status});
+
+    print $params{usergroup}, " create OK\n";
+    print "usergroupid is ", $resp->{usrgrpids}->[0], "\n";
+}
+
+sub usergroup_get
+{
+    print Dumper $za->usergroup()->get(@_);
+}
+
+# user
+
+sub user_media
+{
+    my %params = @_;
+    my @medias;
+
+    for (my $i = 0; $i < 100; $i++) {
+        my $name = "user_media_name_$i";
+
+        if (exists $params{$name}) {
+            my $resp = $za->mediatype()->get($params{$name});
+            if (@{$resp}) {
+                my $mid = $resp->[0]->{mediatypeid};
+                my $sendto = exists $params{"user_media_sendto_$i"} ?
+                    $params{"user_media_sendto_$i"} : "";
+                my $active = exists $params{"user_media_active_$i"} ?
+                    $params{"user_media_active_$i"} : 0;
+                my $severity = exists $params{"user_media_severity_$i"} ?
+                    $params{"user_media_severity_$i"} : 0;
+                my $period = exists $params{"user_media_period_$i"} ?
+                    $params{"user_media_period_$i"} : "";
+                push(@medias, {mediatypeid => $mid,
+                               sendto      => $sendto,
+                               active      => $active,
+                               severity    => $severity,
+                               period      => $period});
+            }
+        } else {
+            last;
+        }
+    }
+
+    return \@medias;
+}
+
+sub user_create
+{
+    my %params = hashize(@_);
+
+    unless (exists $params{user} && exists $params{passwd} &&
+            exists $params{usrgrps}) {
+        help("user.create perror");
+    }
+
+    $params{usrgrpids} = [];
+    foreach my $usrgrp (split /\s+/, $params{usrgrps}) {
+        my $resp = $za->usergroup()->get($usrgrp);
+        if (@{$resp}) {
+            push(@{$params{usrgrpids}}, $resp->[0]->{usrgrpid});
+        }
+    }
+
+    $params{user_medias} = user_media(%params);
+    $params{type} = 1 unless ($params{type});
+
+    my $resp = $za->user()->create(user => $params{user},
+        passwd => $params{passwd}, type => $params{type},
+        usrgrps => $params{usrgrpids}, medias => $params{medias}
+    );
+
+    print $params{user}, " create OK\n";
+    print "userid is ", $resp->{userids}->[0], "\n";
+}
+
+sub user_get
+{
+    print Dumper $za->user()->get(@_);
+}
+
+sub user_delete
+{
+    my $resp = $za->user()->get(@_);
+    unless (@{$resp}) {
+        print "NOT FOUND\n";
+        return;
+    }
+
+    my @uids = map {$_->{userid}} @{$resp};
+    my %filter = map {$_ => 1} @{($za->user()->delete(@uids))->{userids}};
+    foreach my $o (@{$resp}) {
+        if ($filter{$o->{userid}}) {
+            print $o->{alias}, " DELETE\n";
+        } else {
+            print $o->{alias}, " NOT FOUND\n";
+        }
+    }
+}
+
+# help
+
+sub help
+{
+    my $error = shift || undef;
+
+    if (defined $error) {
+        print "\n$error\n\n";
+    }
+
+    print "  help                   \n";
+    print "  user.login             \n";
+    print "\n";
+
+    print "  hostgroup.create _name_\n";
+    print "  hostgroup.exists _name_\n";
+    print "  hostgroup.get    [_name_]\n";
+    print "  hostgroup.delete [_name_]\n";
+    print "\n";
+
+    print "  template.create name=_name_ group=_name_\n";
+    print "  template.exists _name_\n";
+    print "  template.get    [_name_] --filter=[_key_]\n";
+    print "  template.delete [_name_]\n";
+    print "\n";
+
+    print "  item.create name=_name_(not uniq)\n", 
+          "              key=_key_(can't be duplicate)\n",
+          "              template=_template_\n",
+          "              type=0(Zabbix agent)|2(Zabbix trapper)\n",
+          "                   3(simple check)|7(Zabbix agent (active))\n",
+          "                   10(external check)|15(calculated)\n",
+          "              value_type=0(numeric float)|1(character)\n", 
+          "                         2(log)|3(numeric unsigned)|4(text)\n",
+          "              units=_units_\n",
+          "              delay=_delay_\n",
+          "              status=_status_\n";
+    print "  item.update \@see item.create\n";
+    print "  item.get    template=_template_ items=[_item_] --filter=[_key_]\n";
+    print "\n";
+
+    print "  trigger.get [_name_]\n";
+    print "\n";
+
+    print "  mediatype.create name=_name_\n",
+          "                   type=0(email)|1(script)|2(SMS)\n",
+          "                   status=0((default) enabled)|1(disabled)\n",
+          "                   smtp_server=_smtp_server_(email)\n",
+          "                   smtp_helo=_smtp_helo_(email)\n",
+          "                   smtp_email=_smtp_email_(email)\n",
+          "                   script=_script_(script)\n",
+          "                   gsm_modem=_gsm_modem_(SMS)\n";
+    print "  mediatype.get    [_name_]\n";
+    print "\n";
+
+    print "  usergroup.create usergroup=_ug_\n",
+          "                   users_status=0((default) enabled)|1(disabled)\n",
+          "                   hostgroup_n=_hg_ (n in 0, 1, 3 ...)\n", 
+          "                   permission_n=0(access denied)|2(read-only access)\n", 
+          "                              3(read-write access)\n";
+    print "  usergroup.get    [_usergroup_]\n";
+    print "\n";
+
+    print "  user.create user=_user_ passwd=_passwd_\n",
+          "              type=1((default) Zabbix user)|2(Zabbix admin)\n",
+          "              usrgrps=[_usrgrp_]\n",
+          "              user_media_typeid_n=_mediatypeid_\n",
+          "              user_media_sendto_n=_sendto_\n",
+          "              user_media_active_n=0(enabled)|1(disabled)\n",
+          "              user_media_severity_n=_severity_\n",
+          "              user_media_period_n=_period_\n";
+    print "  user.get    [_user_]\n";
+    print "  user.delete [_user_]\n";
+
+    exit($error ? 1 : 0);
+}
+
+sub hashize
+{
+    return map {
+        my($k, $v) = split /=/, $_, 2;
+        $v = [ split(/\s+/, $v) ] if ($v =~ /\s/);
+        $k => $v
+    } @_;
+}
+
+sub filter
+{
+    my ($array, $filter) = ([], undef);
+    foreach my $p (@_) {
+        if ($p =~ /^--filter=(.+)/) {
+            $filter = { map { $_ => 1 } split /\s+/, $1 };
+        } else {
+            push (@{$array}, $p);
+        }
+    }
+
+    return ($array, $filter);
+}

@@ -1,6 +1,9 @@
+(require-package 'htmlize)
 (org-babel-do-load-languages
  'org-babel-load-languages
  '((dot . t)
+   (perl . t)
+   (java . t)
    (C . t)))
 
 (setq org-src-fontify-natively t)

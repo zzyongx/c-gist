@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use File::Copy;
+use FindBin qw($Bin);
+use lib "$Bin/lib";
+
+use Test::BDD::Cucumber::Loader;
+use Test::BDD::Cucumber::Harness::TestBuilder;
+use Test::BDD::Simple;
+use Test::More;
+
+my %filter = map {$_ => 1} @ARGV if (@ARGV);
+
+clean_stepfiles();
+Test::BDD::Simple::compile($_->[0], $_->[1]) foreach (stepfiles(%filter)); 
+
+my ($executor, @features) = Test::BDD::Cucumber::Loader->load(
+                     "features/step_definitions");
+                     
+my $harness = Test::BDD::Cucumber::Harness::TestBuilder->new({});
+$executor->execute( $_, $harness ) for @features;
+done_testing();
+
+sub clean_stepfiles
+{
+    my $sfdir = "$Bin/features/step_definitions";
+    if (opendir(my $dh, $sfdir)) {
+        unlink("$sfdir/$_") foreach readdir($dh);
+        closedir($dh);
+    }
+}
+
+sub stepfiles
+{
+    my %filter = @_;
+    my $FeaturesDir = "$Bin/features";
+
+    opendir(my $dh, "$FeaturesDir") or die "can't opendir $FeaturesDir: $!";
+    my @stepsfiles;
+    while (my $entry = readdir($dh)) {
+        if (-f "$FeaturesDir/$entry" && $entry =~ /^([^.].*?)\.feature$/) {
+            my $stepfile = "$FeaturesDir/step_definitions/${1}_steps.pl";
+            unlink($stepfile) if (-f $stepfile);
+            unlink("$FeaturesDir/step_definitions/$entry");
+
+            if (!%filter || exists $filter{$1}) {
+                push(@stepsfiles, [$stepfile, "$FeaturesDir/${1}_extra.pl"]);
+                copy("$FeaturesDir/$entry", "$FeaturesDir/step_definitions/$entry");
+            }
+        }
+    }
+    closedir $dh;
+
+    return @stepsfiles;
+}

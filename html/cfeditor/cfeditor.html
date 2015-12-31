@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>cfeditor</title>
+
+    <link rel="stylesheet" href="/css/cfeditor.css" type="text/css" />
+    <script src="/js/jquery.js"></script>
+    <script src="/js/jquery.base64.js"></script>
+
+    <script src="/js/keyvaledit.js"></script>
+    <script src="/js/iniedit.js"></script>
+    <script src="/js/httpdedit.js"></script>
+    <script src="/js/configedit.js"></script>
+
+    <script src="/js/cfeditor.js"></script>
+  </head>
+  <body>
+    <div id="error-display">
+    </div>
+
+    <div id="ct-edit-wait">
+      <div class="display">Please Wait </div>
+    </div>
+
+    <div id="ct-edit-output">
+      <div class="close"> X </div>
+      <div class="display"> OK </div>
+    </div>
+
+    <div id="ct-cr" class="ct-edit">
+      <div id="ct-cr-input">
+        <fieldset>
+          <legend> Create Role </legend>
+
+          <label for="cr-name"> <span class="label">Name:</span> </label>
+          <input type="input" id="cr-name" />
+          <span class="error" id="cr-name-error"></span> <br />
+
+          <span class="label"> Inherit: </span>
+          <span id="ct-cr-inherit">
+            <input type="radio" name="r-inherit" value="R1">
+            <label> R1 </label>
+            <input type="radio" name="r-inherit" value="R2">
+            <label> R2 </label>
+          </span> <br />
+
+          <label for="cr-desc"> <span class="label">Description:</span> </label>
+          <textarea id="cr-desc"></textarea>
+
+          <div class="command">
+            <input type="button" name="cr-cancel" value="Cancel">
+            <input type="submit" name="cr-submit" value="OK">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="ct-mr" class="ct-edit">
+      <div id="ct-mr-input">
+        <fieldset>
+          <legend> Edit Role <span id="mr-name">Name</span></legend>
+
+          <span class="label"> Inherit: </span>
+          <span id="ct-mr-inherit">
+            <input type="radio" name="r-inherit">
+            <label> R1 </label>
+            <input type="radio" name="r-inherit">
+            <label> R2 </label>
+          </span> <br />
+
+          <label for="mr-desc"> <span class="label">Description:</span> </label>
+          <textarea id="mr-desc"></textarea>
+
+          <div class="command">
+            <input type="button" name="mr-cancel" value="Cancel">
+            <input type="submit" name="mr-submit" value="OK">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="ct-dr" class="ct-edit">
+      <div id="ct-dr-input">
+        <fieldset>
+          <legend> DELETE Role <span id="dr-name">Name</span></legend>
+
+          <label for="dr-desc"> <span class="label">Description:</span> </label>
+          <textarea id="dr-desc"></textarea>
+
+          <div class="command">
+            <input type="button" name="dr-cancel" value="Cancel">
+            <input type="submit" name="dr-submit" value="OK">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="ct-cm" class="ct-edit">
+      <div id="ct-cm-input">
+        <fieldset>
+          <legend> Create Module </legend>
+
+          <div>
+            <span class="label">Role Name:</span>
+            <span id="cm-role-name"> R </span>
+          </div> 
+
+          <label for="cm-name"> <span class="label">Name:</span> </label>
+          <input type="input" id="cm-name" /> <br />
+
+          <label for="cm-desc"> <span class="label">Descripation:</span> </label>
+          <textarea id="cm-desc"></textarea>
+
+          <div class="command">
+            <input type="button" name="cm-cancel" value="Cancel">
+            <input type="submit" name="cm-submit" value="OK">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="ct-im" class="ct-edit">
+      <div id="ct-im-input">
+        <fieldset>
+          <legend> Inherit Module </legend>
+
+          <div>
+            <span class="label">Role Name:</span>
+            <span id="im-role-name">Role</span>
+          </div> 
+
+          <span class="label">Name:</span>
+          <span id="ct-im-inherit">
+            <input type="radio" name="m-inherit">
+            <label> R::M1 </label>
+            <input type="radio" name="m-inherit">
+            <label> R::M2 </label>
+          </span> <br />
+
+          <label for="im-desc"> <span class="label">Descripation:</span> </label>
+          <textarea id="im-desc"></textarea>
+
+          <div class="command">
+            <input type="button" name="im-cancel" value="Cancel">
+            <input type="submit" name="im-submit" value="OK">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    
+    <!-- create role/module, modify role -->
+    <div id="role-list">
+      <div class="command bline">
+        <input type="button" id="cr" value="create role" />
+      </div>
+
+      <div id="demo" class="ct-role bline hidden">
+        <h2 id="RoleName"> RoleName </h2>
+
+        <h3> parent: <span> Parent </span> </h3>
+        <h3> vsn: <span> 10 </span> </h3>
+        <h3> description: <span> desc </span> </h3>
+
+        <h3> modules: </h3>
+        <ul class="module-list">
+          <li id="demo-ModuleOne"> ModuleOne </li>
+          <li id="demo-ModuleTwo"> ModuleTwo </li>
+        </ul>
+
+        <h3> childrens: </h3>
+        <ul class="module-list">
+          <li> <a href="#ChildOne"> ChildOne </a></li>
+          <li> <a href="#ChildTwo"> ChildTwo </a></li>
+        </ul>
+
+        <div class="command">
+          <input type="button" id="mr-demo", value="modify role" />
+          <input type="button" id="cm-demo", value="create module" />
+          <input type="button" id="im-demo", value="override module" />
+        </div>
+      </div>
+    </div>
+
+    <div id="module-list">
+      <div id="me-nav">
+        <div id="me-pkg">
+          <h2> PACKAGE </h2>
+          <ul id="me-pkg-list">
+            <li> httpd </li>
+            <li> php </li>
+          </ul>
+          <div id="me-pkg-create" class="cmd"> create package </div> 
+        </div>
+
+        <div id="me-srv">
+          <h2> SERVICE </h2>
+          <ul id="me-srv-list">
+            <li> httpd </li>
+          </ul>
+          <div id="me-srv-create" class="cmd"> create service </div> 
+        </div>
+
+        <div id="me-file">
+          <h2> FILE </h2>
+          <ul id="me-file-list">
+            <li> httpd.conf </li>
+            <li> php.ini </li>
+          </ul>
+          <div id="me-file-create" class="cmd"> create file </div> 
+        </div>
+
+        <div id="me-tpl">
+          <h2> TEMPLATE </h2>
+          <ul id="me-tpl-list">
+            <li> httpd.conf </li>
+            <li> php.ini </li>
+          </ul>
+          <div id="me-tpl-create" class="cmd"> create template </div>
+        </div>
+
+        <div id="me-var">
+          <h2> VARIABLE </h2>
+          <ul id="me-var-list">
+            <li> httpd </li>
+            <li> php </li>
+          </ul>
+          <div id="me-var-create" class="cmd"> create variable </div>
+        </div>
+      </div>
+
+      <div id="me-file-edit">
+        
+      </div>
+
+      <div id="me-tpl-edit">
+        <h2> TEMPLATE EDIT </h2>
+        <div id="me-tpl-edit-meta">
+          <div id="me-tpl-edit-name">
+            <label><span class="label">Name: </span></label>
+            <input type="input" id="me-tpl-edit-name-in">
+          </div>
+          <div id="me-tpl-exist-name">
+            <span class="label"> Name: </span>
+            <span id="me-tpl-exist-name-out"> Name </span>
+          </div>
+
+          <label><span class="label"> Format: </span></label>
+          <select id="me-tpl-edit-format">
+            <option value ="raw">raw</option>
+            <option value ="httpd">httpd</option>
+            <option value ="ini">ini</option>
+            <option value ="keyval">keyval</option>
+            <option value ="line">line</option>
+          </select>
+        </div>
+        <hr />
+        <h3>Content: </h3>
+        <div id="configedit"></div>
+      </div>
+
+      <div id="me-tips">
+      </div>
+    </div>
+  </body>
+</html>
