@@ -1,18 +1,19 @@
 package example.api;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import javax.validation.Valid;
 import javax.servlet.http.*;
 import javax.validation.constraints.*;
 import org.hibernate.validator.constraints.NotBlank;
-import com.google.common.base.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.validation.*;
 import org.springframework.web.bind.annotation.*;
 import example.model.*;
+import example.config.*;
 
 @RestController
 @RequestMapping("/api")
@@ -27,6 +28,10 @@ public class EchoController {
     
     public List<String> favoriteColor;
     
+    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonSerialize(using = LocalDateTimeJsonSerializer.class)
+    public LocalDateTime birthday;
+    
     public void setName(String name) {
       this.name = name;
     }
@@ -35,6 +40,9 @@ public class EchoController {
     }
     public void setFavoriteColor(List<String> color) {
       this.favoriteColor = color;
+    }
+    public void setBirthday(LocalDateTime birthday) {
+      this.birthday = birthday;
     }
   }
   
