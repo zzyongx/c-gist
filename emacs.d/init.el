@@ -86,6 +86,9 @@
 ;; C-u C-@ back to last position
 ;; C-x o switch between buffer
 
+;; comment/uncomment
+;; M-:
+
 ;; F10 toggle menu
 
 ;; move around window
