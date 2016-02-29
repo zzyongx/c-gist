@@ -91,6 +91,10 @@
 
 ;; F10 toggle menu
 
+;; coding system
+;; M-x describe-coding-system
+;; M-x universal-coding-system-argument
+
 ;; move around window
 (global-set-key [M-left]  'windmove-left)
 (global-set-key [M-right] 'windmove-right)
