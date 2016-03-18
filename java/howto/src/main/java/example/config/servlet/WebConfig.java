@@ -1,4 +1,4 @@
-package example.config;
+package example.config.servlet;
 
 import java.io.*;
 import java.util.*;

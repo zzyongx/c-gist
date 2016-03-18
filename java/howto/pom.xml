@@ -16,7 +16,7 @@
     <mysql-connector.version>5.1.17</mysql-connector.version>
     <spring.version>4.1.8.RELEASE</spring.version>
     <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
-    <jetty.http.port>8180</jetty.http.port>
+    <jetty.http.port>8888</jetty.http.port>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -132,6 +132,17 @@
       <version>1.3</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.jsondoc</groupId>
+      <artifactId>jsondoc-springmvc</artifactId>
+      <version>1.2.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jsondoc</groupId>
+      <artifactId>jsondoc-ui</artifactId>
+      <version>1.2.11</version>
+    </dependency>    
   </dependencies>
   
   <build>
