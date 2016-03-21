@@ -11,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import example.config.*;
 
 @Configuration
 @EnableWebMvc
@@ -25,6 +26,8 @@ public class WebConfig extends WebMvcConfigurerAdapter {
     builder.featuresToDisable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     builder.serializationInclusion(JsonInclude.Include.NON_NULL);
     converters.add(new MappingJackson2HttpMessageConverter(builder.build()));
+
+//    converters.add(new CsvMessageConverter());
   }
 
   @Bean

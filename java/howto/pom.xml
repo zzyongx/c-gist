@@ -14,9 +14,10 @@
     <java.version>1.8</java.version>
     <mybatis.version>3.2.4</mybatis.version>
     <mysql-connector.version>5.1.17</mysql-connector.version>
-    <spring.version>4.1.8.RELEASE</spring.version>
-    <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
+    <spring.version>4.2.5.RELEASE</spring.version>
+    <spring-boot.version>1.3.3.RELEASE</spring-boot.version>
     <jetty.http.port>8888</jetty.http.port>
+    <jackson.version>2.6.5</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -56,6 +57,22 @@
       <artifactId>spring-jdbc</artifactId>
       <version>${spring.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>        
 
     <dependency>
       <groupId>redis.clients</groupId>

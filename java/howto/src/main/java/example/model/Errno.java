@@ -28,5 +28,8 @@ public class Errno {
   }
 
   public static class InternalErrorException extends RuntimeException {
+    public InternalErrorException(Throwable throwable) {
+      super(throwable);
+    }
   }
 }
