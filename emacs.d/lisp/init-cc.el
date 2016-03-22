@@ -1,9 +1,3 @@
-;; cc
-;;(add-hook 'c-mode-common-hook
-;;          (lambda()
-;;            (setq indent-tabs-mode nil)
-;;            (set c-basic-offset 2)))
-
 (require 'cc-mode)
 (setq-default c-basic-offset 2 c-default-style "linux")
 (setq-default tab-width 2 indent-tabs-mode t)
@@ -26,5 +20,10 @@
              (c-set-style "mycodingstyle")
              (setq tab-width 2)
              (setq c-basic-offset tab-width)))
+
+;; java mode
+(add-hook 'java-mode-hook
+          (lambda ()
+            (java-mode-indent-annotations-setup)))
 
 (provide 'init-cc)

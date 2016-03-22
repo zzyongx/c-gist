@@ -35,19 +35,29 @@ public class CodeAutoGen {
   }
 
   public static class EntityDesc {
+    public boolean hasDateTimeType;
+    public boolean hasBigDecimalType;
     public boolean isPrimaryKeyAutoIncrement;
     public String autoIncrementKey;
     public List<FieldDesc> uniqKeys;
     
     public List<FieldDesc> fields;
     public void prepare() {
+      hasDateTimeType = false;
+      hasBigDecimalType = false;
       uniqKeys = new ArrayList<FieldDesc>();
+      isPrimaryKeyAutoIncrement = false;
       
       for (FieldDesc field : fields) {
         if (field.isUniq) uniqKeys.add(field);
         if (field.isAutoIncrement) {
           isPrimaryKeyAutoIncrement = true;
           autoIncrementKey = field.name;
+        }
+        if (field.type.equals("LocalDateTime") || field.type.equals("LocalDate")) {
+          hasDateTimeType = true;
+        } else if (field.type.equals("BigDecimal")) {
+          hasBigDecimalType = true;
         }
       }
     }
@@ -88,7 +98,7 @@ public class CodeAutoGen {
       }
       return field;
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new Errno.InternalErrorException(e);
     }
   }
 
@@ -125,14 +135,14 @@ public class CodeAutoGen {
     
     for (FieldDesc field : entityDesc.uniqKeys) {
       if (field.isAutoIncrement) {
-        sb.append("    final static SELECT = \"SELECT * FROM \" + TABLE + \" ORDER BY ")
+        sb.append("    final static String SELECT = \"SELECT * FROM \" + TABLE + \" ORDER BY ")
           .append(field.name).append(" DESC LIMIT 100\";\n");
-        sb.append("    final static SELECT_PAGE = \"SELECT * FROM \" + TABLE + \" WHERE ")
+        sb.append("    final static String SELECT_PAGE = \"SELECT * FROM \" + TABLE + \" WHERE ")
           .append(field.name).append(" < #{").append(field.name).append("} ORDER BY ")
           .append(field.name).append(" DESC LIMIT 100\";\n\n");
       }
 
-      sb.append("    final static Strign SELECT_BY_").append(field.name.toUpperCase())
+      sb.append("    final static String SELECT_BY_").append(field.name.toUpperCase())
         .append(" = \"SELECT * FROM \" + TABLE + \" WHERE ")
         .append(field.name).append(" = #{").append(field.name).append("}\";\n");
     }
@@ -147,7 +157,7 @@ public class CodeAutoGen {
         sb.append("  @Select(Sql.SELECT)\n");
         sb.append("  List<").append(entityClassName).append("> find();\n\n");
         
-        sb.append("  @Select(Sql.SELECT_PAGE\n");
+        sb.append("  @Select(Sql.SELECT_PAGE)\n");
         sb.append("  List<").append(entityClassName).append("> findPage(")
           .append(field.type).append( " id);\n\n");
       }
@@ -189,8 +199,8 @@ public class CodeAutoGen {
     
     sb.append("  @InsertProvider(type = Sql.class, method = \"insert\")\n");    
     if (entityDesc.isPrimaryKeyAutoIncrement) {
-      sb.append("  @Options(useGeneratedKey=true, keyProperty = \"")
-        .append(entityDesc.autoIncrementKey).append("\"\n");
+      sb.append("  @Options(useGeneratedKeys=true, keyProperty = \"")
+        .append(entityDesc.autoIncrementKey).append("\")\n");
     }
     sb.append("  int insert(").append(entityClassName).append(" entity);\n");
 
@@ -237,7 +247,7 @@ public class CodeAutoGen {
     for (FieldDesc field : entityDesc.uniqKeys) {
       String methodName = "updateBy" + capitalize(field.name);
       sb.append("  @UpdateProvider(type = Sql.class, method = \"")
-        .append(methodName).append("\");\n");
+        .append(methodName).append("\")\n");
       sb.append("  int ").append(methodName).append("(")
         .append(entityClassName).append(" entity);\n");
     }
@@ -256,7 +266,8 @@ public class CodeAutoGen {
     sb.append("import java.util.*;").append("\n");
     sb.append("import org.apache.ibatis.annotations.*;").append("\n");
     sb.append("import org.apache.ibatis.jdbc.SQL;").append("\n");
-    sb.append("import ").append(entityFullClassName).append(";\n\n");
+    sb.append("import ").append(entityFullClassName).append(";\n");
+    sb.append("\n");
 
     sb.append("public interface ").append(daoClassName).append(" {\n");
     sb.append("  class Sql {\n");
@@ -297,7 +308,8 @@ public class CodeAutoGen {
     StringBuilder sb = new StringBuilder();
     sb.append("package ").append(source.packagePrefix).append(".entity;\n\n");
 
-    sb.append("import java.math.BigDecimal;\n");
+    if (entityDesc.hasBigDecimalType) sb.append("import java.math.BigDecimal;\n");
+    if (entityDesc.hasDateTimeType) sb.append("import java.time.*;\n");
     sb.append("import org.jsondoc.core.annotation.*;\n");
     sb.append("\n");
 
@@ -307,22 +319,30 @@ public class CodeAutoGen {
 
     for (FieldDesc field : entityDesc.fields) {
       sb.append("  @ApiObjectField(description = \"").append(field.name).append("\")\n");
-      sb.append("  ").append(field.type).append(" ").append(field.name).append(";\n\n");
+      String defaultValue = "null";
+      if (field.type.equals("long")) {
+        defaultValue = "Long.MIN_VALUE";
+      } else if (field.type.equals("int")) {
+        defaultValue = "Integer.MIN_VALUE";
+      }
+      
+      sb.append("  ").append(field.type).append(" ").append(field.name)
+        .append(" = ").append(defaultValue).append(";\n\n");
     }
     
     for (FieldDesc field : entityDesc.fields) {
-      sb.append("  void set").append(capitalize(field.name))
+      sb.append("  public void set").append(capitalize(field.name))
         .append("(").append(field.type).append(" ").append(field.name).append(") {\n");
       sb.append("    this.").append(field.name).append(" = ").append(field.name).append(";\n");
       sb.append("  }\n");
 
-      sb.append("  ").append(field.type).append(" get").append(capitalize(field.name))
+      sb.append("  public ").append(field.type).append(" get").append(capitalize(field.name))
         .append("() {\n");
       sb.append("    return ").append(field.name).append(";\n");
       sb.append("  }\n\n");
     }
 
-    sb.append("}");
+    sb.append("}\n");
     return sb.toString();
   }
 
@@ -379,7 +399,7 @@ public class CodeAutoGen {
     sb.append("  @RequestMapping(value = \"/").append(uncapitalize(source.className))
       .append("/\", method = RequestMethod.POST,\n")
       .append("                  consumes = {\"application/x-www-form-urlencoded\",\n")
-      .append("                              \"multipart/form-data\"}\n");
+      .append("                              \"multipart/form-data\"})\n");
     sb.append("  public ApiResult add(\n")
       .append("    @ApiBodyObject @RequestBody \n")
       .append("    @Valid ")
@@ -406,7 +426,7 @@ public class CodeAutoGen {
         .append("/").append(field.name).append("/{").append(field.name)
         .append("}\", method = RequestMethod.PUT,\n")
         .append("                  consumes = {\"application/x-www-form-urlencoded\",\n")
-        .append("                              \"multipart/form-data\"}\n");
+        .append("                              \"multipart/form-data\"})\n");
       sb.append("  public ApiResult ").append(methodName).append("(\n");
 
       for (FieldDesc f : entityDesc.fields) {
@@ -426,10 +446,15 @@ public class CodeAutoGen {
         .append(" ").append(field.name).append(") {\n\n");
 
       sb.append("    ").append(entityClassName).append(" entity = new ")
-        .append(entityClassName).append("()\n");
+        .append(entityClassName).append("();\n");
       for (FieldDesc f : entityDesc.fields) {
-        sb.append("    if (").append(f.name).append(".isPresent()) entity.set")
-          .append(capitalize(f.name)).append("(").append(f.name).append(".get());\n");
+        if (f.name.equals(field.name)) {
+          sb.append("    entity.set").append(capitalize(f.name))
+            .append("(").append(f.name).append(");\n");
+        } else {
+          sb.append("    if (").append(f.name).append(".isPresent()) entity.set")
+            .append(capitalize(f.name)).append("(").append(f.name).append(".get());\n");
+        }
       }
       sb.append("\n");
       sb.append("    return ").append(managerVariableName).append(".")
@@ -447,6 +472,8 @@ public class CodeAutoGen {
     StringBuilder sb = new StringBuilder();
     sb.append("package ").append(source.packagePrefix).append(".api;\n\n");
 
+    if (entityDesc.hasBigDecimalType) sb.append("import java.math.BigDecimal;\n");
+    if (entityDesc.hasDateTimeType) sb.append("import java.time.*;\n");
     sb.append("import java.util.*;\n");
     sb.append("import javax.validation.Valid;\n");
     sb.append("import org.jsondoc.core.annotation.*;\n");
@@ -456,10 +483,10 @@ public class CodeAutoGen {
     sb.append("import org.springframework.http.*;\n");
     sb.append("import ").append(source.packagePrefix).append(".model.*;\n");
     sb.append("import ").append(source.packagePrefix).append(".entity.*;\n");
-    sb.append("import ").append(source.packagePrefix).append(".dao.*;\n");
+    sb.append("import ").append(source.packagePrefix).append(".manager.*;\n");
     sb.append("\n");
 
-    sb.append("@Api = (name = \"").append(source.className).append(" API\", description=\"")
+    sb.append("@Api(name = \"").append(source.className).append(" API\", description=\"")
       .append(source.className).append("\")\n");
     sb.append("@RestController\n");
     sb.append("@RequestMapping(\"/api\")\n");
@@ -474,16 +501,103 @@ public class CodeAutoGen {
     sb.append(genControllerInsertFun(source, entityDesc));
     sb.append("\n");
     sb.append(genControllerUpdateFun(source, entityDesc));
-    sb.append("}");
+    sb.append("}\n");
     return sb.toString();
   }
 
   String genManagerClassName(String className) {
     return className + "Manager";
   }
+
+  StringBuilder genManagerSelectFun(EntitySource source, EntityDesc entityDesc) {
+    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    StringBuilder sb = new StringBuilder();
+
+    for (FieldDesc field : entityDesc.uniqKeys) {
+      if (field.isAutoIncrement) {
+        sb.append("  public ApiResult find() {\n");
+        sb.append("    return new ApiResult<List>(").append(daoVariableName).append(".find());\n");
+        sb.append("  }\n\n");
+
+        sb.append("  public ApiResult find(long pager) {\n");
+        sb.append("    return new ApiResult<List>(").append(daoVariableName)
+          .append(".findPage(pager));\n");
+        sb.append("  }\n\n");
+      }
+
+      String methodName = "findBy" + capitalize(field.name);
+      
+      sb.append("  public ApiResult ").append(methodName).append("(")
+        .append(field.type).append(" ").append(field.name).append(") {\n");
+      sb.append("    return new ApiResult<").append(genEntityClassName(source.className))
+        .append(">(").append(daoVariableName).append(".").append(methodName)
+        .append("(").append(field.name).append("));\n");
+      sb.append("  }\n\n");
+    }
+    return sb;
+  }
+
+  StringBuilder genManagerInsertFun(EntitySource source, EntityDesc entityDesc) {
+    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    StringBuilder sb = new StringBuilder();
+
+    sb.append("  public ApiResult add(").append(genEntityClassName(source.className))
+      .append(" entity) {\n");
+    sb.append("    ").append(daoVariableName).append(".insert(entity);\n");
+    if (entityDesc.isPrimaryKeyAutoIncrement) {
+      sb.append("    return new ApiResult<Long>(entity.get")
+        .append(capitalize(entityDesc.autoIncrementKey)).append("());\n");
+    } else {
+      sb.append("    return ApiResult.ok();\n");
+    }
+    sb.append("  }\n");
+      
+    return sb;
+  }
+
+  StringBuilder genManagerUpdateFun(EntitySource source, EntityDesc entityDesc) {
+    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    String entityClassName = genEntityClassName(source.className);
+    StringBuilder sb = new StringBuilder();
+
+    for (FieldDesc field : entityDesc.uniqKeys) {
+      String method = "updateBy" + capitalize(field.name);
+      sb.append("  public ApiResult ").append(method).append("(")
+        .append(entityClassName).append(" entity) {\n");
+      sb.append("    ").append(daoVariableName).append(".").append(method).append("(entity);\n");
+      sb.append("    return ApiResult.ok();\n");
+      sb.append("  }\n\n");
+    }
+
+    return sb;                                          
+  }
+      
+  String genManagerCode(EntitySource source, EntityDesc entityDesc) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("package ").append(source.packagePrefix).append(".manager;\n\n");
+
+    sb.append("import java.util.*;\n");
+    sb.append("import org.springframework.beans.factory.annotation.Autowired;\n");
+    sb.append("import org.springframework.stereotype.Component;\n");
+    sb.append("import ").append(source.packagePrefix).append(".model.*;\n");
+    sb.append("import ").append(source.packagePrefix).append(".dao.*;\n");
+    sb.append("import ").append(source.packagePrefix).append(".entity.*;\n");
+    sb.append("\n");
+
+    sb.append("@Component\n");
+    sb.append("public class ").append(genManagerClassName(source.className)).append(" {\n");
+    sb.append("  @Autowired ").append(genDaoClassName(source.className))
+      .append(" ").append(uncapitalize(genDaoClassName(source.className))).append(";\n");
+    sb.append("\n");
+
+    sb.append(genManagerSelectFun(source, entityDesc));
+    sb.append("\n");
+    sb.append(genManagerInsertFun(source, entityDesc));
+    sb.append("\n");
+    sb.append(genManagerUpdateFun(source, entityDesc));
+    sb.append("}\n");
     
-  String genManagerCode(EntityDesc entityDescList) {
-    return "";
+    return sb.toString();
   }  
   
   @ApiMethod(description = "Get Dao/Entity/Controller/Manager code")  
@@ -529,7 +643,7 @@ public class CodeAutoGen {
     } else if (type.equals("controller")) {
       return genControllerCode(source, getEntityDesc(source));
     } else if (type.equals("manager")) {
-      return genManagerCode(getEntityDesc(source));
+      return genManagerCode(source, getEntityDesc(source));
     } else {
       return genCode(source);
     }
@@ -553,9 +667,16 @@ public class CodeAutoGen {
     sb.append("== END ").append(genControllerClassName(source.className)).append(" ==\n");
 
     sb.append("== BEGIN ").append(genManagerClassName(source.className)).append(" ==\n");
-    sb.append(genManagerCode(desc));
+    sb.append(genManagerCode(source, desc));
     sb.append("== END ").append(genManagerClassName(source.className)).append(" ==\n");
 
     return sb.toString();
   }
+
+  @ExceptionHandler(Errno.InternalErrorException.class)
+  @ResponseStatus
+  public String internalServerError(Exception e) {
+    return e.toString();
+  }
+  
 }
