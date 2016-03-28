@@ -1,10 +1,12 @@
 package example.config;
 
+import java.util.*;
 import javax.sql.DataSource;
 import com.alibaba.druid.pool.DruidDataSource;
 import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.type.TypeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +14,11 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import example.utils.*;
 
 @Configuration
 @EnableTransactionManagement
-@MapperScan("example.dao")
+@MapperScan(ProjectInfo.MAPPER_PKG)
 public class DaoConfig {
   @Autowired Environment env;
 
@@ -36,26 +39,42 @@ public class DaoConfig {
     return dataSource;
   }
 
+  @SuppressWarnings("unchecked")
+  void registerEnumValueHandler(TypeHandlerRegistry register, String packageName) {
+    List<Class<? extends Enum<?>>> enums = ReflectUtil.findEnums(packageName);
+    for (Class<? extends Enum<?>> clazz : enums) {
+      try {
+        clazz.getMethod("getValue");
+      } catch (Exception e) {
+        continue;
+      }
+      // we must appoint JavaType
+      register.register(clazz, new EnumValueTypeHandler(clazz));
+    }
+  }
+
   @Bean
   public SqlSessionFactory sqlSessionFactory() throws Exception {
-    SqlSessionFactoryBean sqlSessionFactory = new SqlSessionFactoryBean();
-    sqlSessionFactory.setDataSource(dataSource());
+    SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
+    sqlSessionFactoryBean.setDataSource(dataSource());
 
-    org.apache.ibatis.session.Configuration configuration =
-      new org.apache.ibatis.session.Configuration();
+    TypeHandler[] handlers = new TypeHandler[] {
+      new LocalDateTimeTypeHandler(),
+    };
+    sqlSessionFactoryBean.setTypeHandlers(handlers);
+    
+    SqlSessionFactory sqlSessionFactory = (SqlSessionFactory) sqlSessionFactoryBean.getObject();
+
+    org.apache.ibatis.session.Configuration configuration = sqlSessionFactory.getConfiguration();
     configuration.setCacheEnabled(false);
     configuration.setMultipleResultSetsEnabled(true);
     configuration.setDefaultExecutorType(ExecutorType.REUSE);
     configuration.setLazyLoadingEnabled(false);
     configuration.setAggressiveLazyLoading(true);
     configuration.setDefaultStatementTimeout(300);
+    registerEnumValueHandler(configuration.getTypeHandlerRegistry(), ProjectInfo.PKG_PREFIX);
 
-    TypeHandler[] handlers = new TypeHandler[] {
-      new LocalDateTimeTypeHandler(),
-    };
-    sqlSessionFactory.setTypeHandlers(handlers);
-
-    return (SqlSessionFactory) sqlSessionFactory.getObject();
+    return sqlSessionFactory;
   }
 
   @Bean

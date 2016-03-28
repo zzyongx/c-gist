@@ -15,11 +15,12 @@ import example.config.*;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan({"example.api"})
+@ComponentScan({ProjectInfo.API_PKG})
 public class WebConfig extends WebMvcConfigurerAdapter {
   @Override
   public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
     converters.add(new StringHttpMessageConverter());
+    converters.add(new FormHttpMessageConverter());
       
     Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

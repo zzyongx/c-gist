@@ -9,7 +9,7 @@ public class WebInitializer extends AbstractAnnotationConfigDispatcherServletIni
   @Override
   protected Class<?>[] getRootConfigClasses() {
     return new Class<?>[] {
-      RootConfig.class, DaoConfig.class
+      RootConfig.class, DaoConfig.class, AdvanceDaoConfig.class
     };
   }
   

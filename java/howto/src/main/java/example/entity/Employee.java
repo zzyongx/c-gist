@@ -5,6 +5,13 @@ import org.jsondoc.core.annotation.*;
 
 @ApiObject(name = "Employee", description = "Employee info")
 public class Employee {
+  public static enum Gender {
+    MALE(1), FEMALE(2);
+    private int value;
+    Gender(int value) {this.value = value;}
+    public int getValue() {return this.value;}
+  };
+  
   @ApiObjectField(description = "employee id")
   long   id;
 
@@ -17,7 +24,10 @@ public class Employee {
   @ApiObjectField(description = "title and rank")
   String position;
   @ApiObjectField(description = "phone number")
-  int    phone      = -1;
+  int    phone      = Integer.MIN_VALUE;
+  @ApiObjectField(description = "gender")
+  Gender gender;
+  
 
   public void setId(long id) {
     this.id = id;
@@ -52,5 +62,12 @@ public class Employee {
   }
   public int getPhone() {
     return this.phone;
-  }    
+  }
+
+  public void setGender(Gender gender) {
+    this.gender = gender;
+  }
+  public Gender getGender() {
+    return this.gender;
+  }
 }

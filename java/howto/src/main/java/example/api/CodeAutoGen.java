@@ -126,11 +126,11 @@ public class CodeAutoGen {
     }
   }
 
-  String genDaoClassName(String className) {
-    return className + "Dao";
+  String genMapperClassName(String className) {
+    return className + "mapper";
   }
 
-  StringBuilder genDaoSelectSql(EntityDesc entityDesc) {
+  StringBuilder genMapperSelectSql(EntityDesc entityDesc) {
     StringBuilder sb = new StringBuilder();
     
     for (FieldDesc field : entityDesc.uniqKeys) {
@@ -149,7 +149,7 @@ public class CodeAutoGen {
     return sb;
   }
   
-  StringBuilder genDaoSelectFun(EntityDesc entityDesc, String entityClassName) {
+  StringBuilder genMapperSelectFun(EntityDesc entityDesc, String entityClassName) {
     StringBuilder sb = new StringBuilder();
     
     for (FieldDesc field : entityDesc.uniqKeys) {
@@ -169,7 +169,7 @@ public class CodeAutoGen {
     return sb;
   }
 
-  StringBuilder genDaoInsertSql(EntityDesc entityDesc, String entityClassName) {
+  StringBuilder genMapperInsertSql(EntityDesc entityDesc, String entityClassName) {
     StringBuilder sb = new StringBuilder();
     
     sb.append("    public static String insert(").append(entityClassName).append(" entity) {\n");
@@ -194,7 +194,7 @@ public class CodeAutoGen {
     return sb;
   }
 
-  StringBuilder genDaoInsertFun(EntityDesc entityDesc, String entityClassName) {
+  StringBuilder genMapperInsertFun(EntityDesc entityDesc, String entityClassName) {
     StringBuilder sb = new StringBuilder();
     
     sb.append("  @InsertProvider(type = Sql.class, method = \"insert\")\n");    
@@ -207,7 +207,7 @@ public class CodeAutoGen {
     return sb;
   }
 
-  StringBuilder genDaoUpdateSql(EntityDesc entityDesc, String entityClassName) {
+  StringBuilder genMapperUpdateSql(EntityDesc entityDesc, String entityClassName) {
     StringBuilder sb = new StringBuilder();
 
     for (FieldDesc field : entityDesc.uniqKeys) {
@@ -241,7 +241,7 @@ public class CodeAutoGen {
     return sb;
   }
 
-  StringBuilder genDaoUpdateFun(EntityDesc entityDesc, String entityClassName) {
+  StringBuilder genMapperUpdateFun(EntityDesc entityDesc, String entityClassName) {
     StringBuilder sb = new StringBuilder();
 
     for (FieldDesc field : entityDesc.uniqKeys) {
@@ -255,13 +255,13 @@ public class CodeAutoGen {
     return sb;
   }  
 
-  String genDaoCode(EntitySource source, EntityDesc entityDesc) {
-    String daoClassName = genDaoClassName(source.className);
+  String genMapperCode(EntitySource source, EntityDesc entityDesc) {
+    String mapperClassName = genMapperClassName(source.className);
     String entityClassName = genEntityClassName(source.className);
     String entityFullClassName = genEntityFullClassName(source.packagePrefix, source.className);
       
     StringBuilder sb = new StringBuilder();
-    sb.append("package ").append(source.packagePrefix).append(".dao;").append("\n\n");
+    sb.append("package ").append(source.packagePrefix).append(".mapper;").append("\n\n");
 
     sb.append("import java.util.*;").append("\n");
     sb.append("import org.apache.ibatis.annotations.*;").append("\n");
@@ -269,24 +269,24 @@ public class CodeAutoGen {
     sb.append("import ").append(entityFullClassName).append(";\n");
     sb.append("\n");
 
-    sb.append("public interface ").append(daoClassName).append(" {\n");
+    sb.append("public interface ").append(mapperClassName).append(" {\n");
     sb.append("  class Sql {\n");
     sb.append("    final static String TABLE = \"").append(source.className).append("\";\n\n");
     
-    sb.append(genDaoSelectSql(entityDesc));
+    sb.append(genMapperSelectSql(entityDesc));
     sb.append("\n");
-    sb.append(genDaoInsertSql(entityDesc, entityClassName));
+    sb.append(genMapperInsertSql(entityDesc, entityClassName));
     sb.append("\n");
-    sb.append(genDaoUpdateSql(entityDesc, entityClassName));
+    sb.append(genMapperUpdateSql(entityDesc, entityClassName));
     sb.append("\n");
 
     sb.append("  }\n\n");
 
-    sb.append(genDaoSelectFun(entityDesc, entityClassName));
+    sb.append(genMapperSelectFun(entityDesc, entityClassName));
     sb.append("\n");
-    sb.append(genDaoInsertFun(entityDesc, entityClassName));
+    sb.append(genMapperInsertFun(entityDesc, entityClassName));
     sb.append("\n");
-    sb.append(genDaoUpdateFun(entityDesc, entityClassName));
+    sb.append(genMapperUpdateFun(entityDesc, entityClassName));
     sb.append("\n");
 
     sb.append("}\n");
@@ -357,14 +357,14 @@ public class CodeAutoGen {
 
     for (FieldDesc field : entityDesc.uniqKeys) {
       if (field.isAutoIncrement) {
-        sb.append("  @ApiMethod(description = \"select last items\")\n");
+        sb.append("  @ApiMethod(description = \"FunName: select last items\")\n");
         sb.append("  @RequestMapping(value = \"/").append(entityName)
           .append("s\", method = RequestMethod.GET)\n");
         sb.append("  public ApiResult find() {\n");
         sb.append("    return ").append(managerVariableName).append(".find();\n");
         sb.append("  }\n\n");
 
-        sb.append("  @ApiMethod(description = \"select older items\")\n");
+        sb.append("  @ApiMethod(description = \"FunName: select older items\")\n");
         sb.append("  @RequestMapping(value = \"/").append(entityName)
           .append("s/{pager}\", method = RequestMethod.GET)\n");
         sb.append("  public ApiResult findPage(\n");
@@ -374,7 +374,7 @@ public class CodeAutoGen {
         sb.append("  }\n\n");
       }
 
-      sb.append("  @ApiMethod(description = \"select by ").append(field.name).append("\")\n");
+      sb.append("  @ApiMethod(description = \"FunName: select by ").append(field.name).append("\")\n");
       sb.append("  @RequestMapping(value = \"/").append(entityName)
         .append("s/").append(field.name).append("/{").append(field.name)
         .append("}\", method = RequestMethod.GET)\n");
@@ -395,14 +395,12 @@ public class CodeAutoGen {
     String managerVariableName = uncapitalize(genManagerClassName(source.className));    
     StringBuilder sb = new StringBuilder();
 
-    sb.append("  @ApiMethod(description = \"add ").append(source.className).append("\")\n");
+    sb.append("  @ApiMethod(description = \"FunName: add ").append(source.className).append("\")\n");
     sb.append("  @RequestMapping(value = \"/").append(uncapitalize(source.className))
       .append("/\", method = RequestMethod.POST,\n")
-      .append("                  consumes = {\"application/x-www-form-urlencoded\",\n")
-      .append("                              \"multipart/form-data\"})\n");
+      .append("                  consumes = \"application/x-www-form-urlencoded\")\n");
     sb.append("  public ApiResult add(\n")
-      .append("    @ApiBodyObject @RequestBody \n")
-      .append("    @Valid ")
+      .append("    @ApiBodyObject @Valid \n")
       .append(genEntityClassName(source.className))
       .append(" entity, BindingResult bindingResult) {\n");
     sb.append("    if (bindingResult.hasErrors()) {\n");
@@ -421,12 +419,11 @@ public class CodeAutoGen {
 
     for (FieldDesc field : entityDesc.uniqKeys) {
       String methodName = "updateBy" + capitalize(field.name);
-      sb.append("  @ApiMethod(description = \"").append(methodName).append("\")\n");
+      sb.append("  @ApiMethod(description = \"FunName: ").append(methodName).append("\")\n");
       sb.append("  @RequestMapping(value = \"/").append(uncapitalize(source.className))
         .append("/").append(field.name).append("/{").append(field.name)
         .append("}\", method = RequestMethod.PUT,\n")
-        .append("                  consumes = {\"application/x-www-form-urlencoded\",\n")
-        .append("                              \"multipart/form-data\"})\n");
+        .append("                  consumes = \"application/x-www-form-urlencoded\")\n");
       sb.append("  public ApiResult ").append(methodName).append("(\n");
 
       for (FieldDesc f : entityDesc.fields) {
@@ -510,17 +507,17 @@ public class CodeAutoGen {
   }
 
   StringBuilder genManagerSelectFun(EntitySource source, EntityDesc entityDesc) {
-    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    String mapperVariableName = uncapitalize(genMapperClassName(source.className));
     StringBuilder sb = new StringBuilder();
 
     for (FieldDesc field : entityDesc.uniqKeys) {
       if (field.isAutoIncrement) {
         sb.append("  public ApiResult find() {\n");
-        sb.append("    return new ApiResult<List>(").append(daoVariableName).append(".find());\n");
+        sb.append("    return new ApiResult<List>(").append(mapperVariableName).append(".find());\n");
         sb.append("  }\n\n");
 
         sb.append("  public ApiResult find(long pager) {\n");
-        sb.append("    return new ApiResult<List>(").append(daoVariableName)
+        sb.append("    return new ApiResult<List>(").append(mapperVariableName)
           .append(".findPage(pager));\n");
         sb.append("  }\n\n");
       }
@@ -530,7 +527,7 @@ public class CodeAutoGen {
       sb.append("  public ApiResult ").append(methodName).append("(")
         .append(field.type).append(" ").append(field.name).append(") {\n");
       sb.append("    return new ApiResult<").append(genEntityClassName(source.className))
-        .append(">(").append(daoVariableName).append(".").append(methodName)
+        .append(">(").append(mapperVariableName).append(".").append(methodName)
         .append("(").append(field.name).append("));\n");
       sb.append("  }\n\n");
     }
@@ -538,12 +535,12 @@ public class CodeAutoGen {
   }
 
   StringBuilder genManagerInsertFun(EntitySource source, EntityDesc entityDesc) {
-    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    String mapperVariableName = uncapitalize(genMapperClassName(source.className));
     StringBuilder sb = new StringBuilder();
 
     sb.append("  public ApiResult add(").append(genEntityClassName(source.className))
       .append(" entity) {\n");
-    sb.append("    ").append(daoVariableName).append(".insert(entity);\n");
+    sb.append("    ").append(mapperVariableName).append(".insert(entity);\n");
     if (entityDesc.isPrimaryKeyAutoIncrement) {
       sb.append("    return new ApiResult<Long>(entity.get")
         .append(capitalize(entityDesc.autoIncrementKey)).append("());\n");
@@ -556,7 +553,7 @@ public class CodeAutoGen {
   }
 
   StringBuilder genManagerUpdateFun(EntitySource source, EntityDesc entityDesc) {
-    String daoVariableName = uncapitalize(genDaoClassName(source.className));
+    String mapperVariableName = uncapitalize(genMapperClassName(source.className));
     String entityClassName = genEntityClassName(source.className);
     StringBuilder sb = new StringBuilder();
 
@@ -564,7 +561,7 @@ public class CodeAutoGen {
       String method = "updateBy" + capitalize(field.name);
       sb.append("  public ApiResult ").append(method).append("(")
         .append(entityClassName).append(" entity) {\n");
-      sb.append("    ").append(daoVariableName).append(".").append(method).append("(entity);\n");
+      sb.append("    ").append(mapperVariableName).append(".").append(method).append("(entity);\n");
       sb.append("    return ApiResult.ok();\n");
       sb.append("  }\n\n");
     }
@@ -580,14 +577,14 @@ public class CodeAutoGen {
     sb.append("import org.springframework.beans.factory.annotation.Autowired;\n");
     sb.append("import org.springframework.stereotype.Component;\n");
     sb.append("import ").append(source.packagePrefix).append(".model.*;\n");
-    sb.append("import ").append(source.packagePrefix).append(".dao.*;\n");
+    sb.append("import ").append(source.packagePrefix).append(".mapper.*;\n");
     sb.append("import ").append(source.packagePrefix).append(".entity.*;\n");
     sb.append("\n");
 
     sb.append("@Component\n");
     sb.append("public class ").append(genManagerClassName(source.className)).append(" {\n");
-    sb.append("  @Autowired ").append(genDaoClassName(source.className))
-      .append(" ").append(uncapitalize(genDaoClassName(source.className))).append(";\n");
+    sb.append("  @Autowired ").append(genMapperClassName(source.className))
+      .append(" ").append(uncapitalize(genMapperClassName(source.className))).append(";\n");
     sb.append("\n");
 
     sb.append(genManagerSelectFun(source, entityDesc));
@@ -600,13 +597,13 @@ public class CodeAutoGen {
     return sb.toString();
   }  
   
-  @ApiMethod(description = "Get Dao/Entity/Controller/Manager code")  
+  @ApiMethod(description = "Get Mapper/Entity/Controller/Manager code")  
   @RequestMapping(value = {"/", "/{typeOpt}"}, method = RequestMethod.GET,
                   produces = "text/plain"
   )
-  public String getDaoCode(
+  public String getMapperCode(
     @ApiPathParam(name = "type", description = "code type",
-                  allowedvalues = {"dao", "entity", "controller", "manager", ""})
+                  allowedvalues = {"mapper", "entity", "controller", "manager", ""})
     @PathVariable Optional<String> typeOpt,
     
     @ApiQueryParam(name = "dbHostPort", description = "mysql host:port")
@@ -636,8 +633,8 @@ public class CodeAutoGen {
     source.packagePrefix = packagePrefix;
 
     String type = typeOpt.orElse("");
-    if (type.equals("dao")) {
-      return genDaoCode(source, getEntityDesc(source));
+    if (type.equals("mapper")) {
+      return genMapperCode(source, getEntityDesc(source));
     } else if (type.equals("entity")) {
       return genEntityCode(source, getEntityDesc(source));
     } else if (type.equals("controller")) {
@@ -654,9 +651,9 @@ public class CodeAutoGen {
     
     StringBuilder sb = new StringBuilder();
     
-    sb.append("== BEGIN ").append(genDaoClassName(source.className)).append(" ==\n");
-    sb.append(genDaoCode(source, desc));
-    sb.append("== END ").append(genDaoClassName(source.className)).append(" ==\n");
+    sb.append("== BEGIN ").append(genMapperClassName(source.className)).append(" ==\n");
+    sb.append(genMapperCode(source, desc));
+    sb.append("== END ").append(genMapperClassName(source.className)).append(" ==\n");
 
     sb.append("== BEGIN ").append(genEntityClassName(source.className)).append(" ==\n");
     sb.append(genEntityCode(source, desc));

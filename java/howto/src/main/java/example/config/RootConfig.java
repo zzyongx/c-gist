@@ -8,7 +8,7 @@ import org.springframework.core.io.ClassPathResource;
 import redis.clients.jedis.JedisPool;
 
 @Configuration
-@ComponentScan({"example"})
+@ComponentScan({ProjectInfo.PKG_PREFIX + ".api", ProjectInfo.PKG_PREFIX + ".manager"})
 @PropertySource("classpath:application-${spring.profiles.active}.properties")
 public class RootConfig {
   @Autowired Environment env;
