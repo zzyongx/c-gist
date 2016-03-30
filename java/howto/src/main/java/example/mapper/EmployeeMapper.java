@@ -4,6 +4,7 @@ import java.util.*;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.jdbc.SQL;
 import example.entity.Employee;
+import example.annotation.PartitionKey;
 
 public interface EmployeeMapper {
   class Sql {
@@ -76,14 +77,14 @@ public interface EmployeeMapper {
                                        @Param("gender") Employee.Gender gender);
 
   @Select(Sql.SELECT)
-  Employee find(@Param("id") long id);
+  Employee find(@PartitionKey @Param("id") long id);
 
   @InsertProvider(type = Sql.class, method = "insert")
   @Options(useGeneratedKeys=true, keyProperty = "id")
   int add(Employee employee);
 
   @UpdateProvider(type = Sql.class, method = "update")
-  int update(Employee employee);
+  int update(@PartitionKey("id") Employee employee);
 
   @Delete(Sql.DELETE)
   int delete(long id);

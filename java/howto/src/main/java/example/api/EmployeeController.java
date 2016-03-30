@@ -14,7 +14,7 @@ import org.springframework.http.*;
 import example.model.*;
 import example.entity.*;
 import example.mapper.*;
-import example.config.EnumValueTypeHandler;
+import example.config.*;
 
 @Api(name = "employee API",
      description = "demonstrate how to use Mybatis"
@@ -26,6 +26,9 @@ public class EmployeeController {
 
   @Autowired @Qualifier("dbHorizontalPartition")
   ArrayList<EmployeeMapper> employeeMapperList;
+
+  @Autowired @Qualifier("smartEmployeeMapper")
+  EmployeeMapper smartEmployeeMapper;
 
   @ApiMethod(description = "Employee.getAll: Get all employees")
   @RequestMapping(value = "/employees", method = RequestMethod.GET)
@@ -123,6 +126,20 @@ public class EmployeeController {
     if (employee != null) return new ApiResult<Employee>(employee);
     else return ApiResult.notFound();
   }
+
+  /* demonstrate smart database */
+  @ApiMethod(description = "Employee.smart: ")
+  @RequestMapping(value = "/employeeSmart", method = RequestMethod.GET)
+  public ApiResult getEmployeeSmart() {
+    List<Employee> employees = smartEmployeeMapper.findAll(10);
+    for (Employee e : employees) {
+      Employee employee = smartEmployeeMapper.find(e.getId());
+      employee.setGender(Employee.Gender.MALE);
+      smartEmployeeMapper.update(employee);
+    }
+
+    return new ApiResult<List>(SmartDataSource.ContextHolder.getDebug());
+  }  
 
   /* demonstrate manual wired */
   @Autowired DataSource dataSource;

@@ -6,9 +6,7 @@ import com.alibaba.druid.pool.DruidDataSource;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.type.TypeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
@@ -21,20 +19,6 @@ import example.utils.*;
 @EnableTransactionManagement
 public class AdvanceDaoConfig {
   @Autowired Environment env;
-
-  @SuppressWarnings("unchecked")
-  void registerEnumValueHandler(TypeHandlerRegistry register, String packageName) {
-    List<Class<? extends Enum<?>>> enums = ReflectUtil.findEnums(packageName);
-    for (Class<? extends Enum<?>> clazz : enums) {
-      try {
-        clazz.getMethod("getValue");
-      } catch (Exception e) {
-        continue;
-      }
-      // we must appoint JavaType
-      register.register(clazz, new EnumValueTypeHandler(clazz));
-    }
-  }
 
   /* for demonation horizontal partition */
   @Bean(name = "dbHorizontalPartitionDataSourceList")
@@ -53,10 +37,10 @@ public class AdvanceDaoConfig {
       }
       
       DruidDataSource dataSource = new DruidDataSource();
-      dataSource.setDriverClassName(env.getRequiredProperty("jdbc.driver"));
-      dataSource.setUrl(env.getRequiredProperty("jdbc.url"));
-      dataSource.setUsername(env.getRequiredProperty("jdbc.username"));
-      dataSource.setPassword(env.getRequiredProperty("jdbc.password"));
+      dataSource.setDriverClassName(dbDriver);
+      dataSource.setUrl(dbUrl);
+      dataSource.setUsername(dbUser);
+      dataSource.setPassword(dbPassword);
 
       list.add(dataSource);
     }
@@ -73,11 +57,6 @@ public class AdvanceDaoConfig {
       SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
       sqlSessionFactoryBean.setDataSource(dataSource);
 
-      TypeHandler[] handlers = new TypeHandler[] {
-        new LocalDateTimeTypeHandler(),
-      };
-      sqlSessionFactoryBean.setTypeHandlers(handlers);
-    
       SqlSessionFactory sqlSessionFactory = (SqlSessionFactory) sqlSessionFactoryBean.getObject();
 
       org.apache.ibatis.session.Configuration configuration = sqlSessionFactory.getConfiguration();
@@ -89,7 +68,8 @@ public class AdvanceDaoConfig {
       configuration.setDefaultStatementTimeout(300);
       configuration.addMapper(EmployeeMapper.class);
       
-      registerEnumValueHandler(configuration.getTypeHandlerRegistry(), ProjectInfo.PKG_PREFIX);
+      MyBatisHelper.registerEnumHandler(
+        configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 
       sqlSessionFactoryList.add(sqlSessionFactory);
     }
