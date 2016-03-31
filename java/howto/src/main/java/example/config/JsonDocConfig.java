@@ -3,8 +3,8 @@ package example.config;
 import java.util.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import example.config.jsondoc.Spring4xJSONDocScanner;
-import example.config.jsondoc.JsonDocController;
+import commons.jsondoc.Spring4xJSONDocScanner;
+import commons.jsondoc.JsonDocController;
 
 @Configuration
 public class JsonDocConfig {

@@ -1,4 +1,4 @@
-package example.utils;
+package commons.utils;
 
 import java.util.List;
 import org.apache.ibatis.type.TypeHandler;

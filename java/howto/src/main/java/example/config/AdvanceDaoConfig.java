@@ -12,8 +12,9 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import commons.mybatis.*;
+import commons.utils.*;
 import example.mapper.*;
-import example.utils.*;
 
 @Configuration
 @EnableTransactionManagement

@@ -1,4 +1,4 @@
-package example.config;
+package commons.mybatis;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;

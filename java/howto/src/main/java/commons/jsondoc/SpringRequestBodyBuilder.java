@@ -1,4 +1,4 @@
-package example.config.jsondoc;
+package commons.jsondoc;
 
 import java.lang.reflect.Method;
 

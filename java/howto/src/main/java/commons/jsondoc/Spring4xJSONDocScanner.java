@@ -1,4 +1,4 @@
-package example.config.jsondoc;
+package commons.jsondoc;
 
 import java.util.List;
 import java.util.Map;
@@ -50,8 +50,6 @@ public class Spring4xJSONDocScanner extends AbstractSpringJSONDocScanner {
 			for(Class<?> candidate: fieldCandidates) {
 				if(!subCandidates.contains(candidate)) {
 					subCandidates.add(candidate);
-
-
 					appendSubCandidates(candidate, subCandidates);
 				}
 			}

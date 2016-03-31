@@ -1,4 +1,4 @@
-package example.config;
+package commons.mybatis;
 
 import java.lang.reflect.Method;
 import java.sql.CallableStatement;

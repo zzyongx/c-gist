@@ -1,7 +1,6 @@
-package example.config.jsondoc;
+package commons.jsondoc;
 
 import java.util.List;
-
 import org.jsondoc.core.pojo.JSONDoc;
 import org.jsondoc.core.pojo.JSONDoc.MethodDisplay;
 import org.jsondoc.core.scanner.JSONDocScanner;

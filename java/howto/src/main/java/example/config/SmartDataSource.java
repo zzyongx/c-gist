@@ -21,7 +21,7 @@ public class SmartDataSource extends AbstractRoutingDataSource {
     public static String get(int m) {
       String s = strHolder.get();
       strHolder.remove();
-      
+
       Long l = longHolder.get();
       if (l != null) {
         l %= m;
@@ -29,8 +29,10 @@ public class SmartDataSource extends AbstractRoutingDataSource {
         s = s + "-" + String.valueOf(l);
       }
 
-      debug.get().push(s);
-      if (debug.get().size() > 10) debug.get().pop();
+      if (s != null) {
+        debug.get().push(s);
+        if (debug.get().size() > 10) debug.get().pop();
+      }
       
       return s;
     }
@@ -50,6 +52,7 @@ public class SmartDataSource extends AbstractRoutingDataSource {
   }
 
   public static class MapperAdvice implements MethodBeforeAdvice {
+    @SuppressWarnings("unchecked")
     public void before(Method method, Object[] args, Object target) throws Exception {
       if (!method.isAnnotationPresent(Select.class) &&
           !method.isAnnotationPresent(SelectProvider.class)) {
