@@ -3,8 +3,8 @@ package example.mapper;
 import java.util.*;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.jdbc.SQL;
+import commons.annotation.PartitionKey;
 import example.entity.Employee;
-import example.annotation.PartitionKey;
 
 public interface EmployeeMapper {
   class Sql {

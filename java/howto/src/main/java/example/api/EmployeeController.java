@@ -11,6 +11,8 @@ import example.model.*;
 import example.entity.*;
 import example.mapper.*;
 
+/* Warning: you shouldn't use Mapper in Controller, add Manager layer */
+
 @Api(name = "employee API",
      description = "demonstrate how to use Mybatis"
 )

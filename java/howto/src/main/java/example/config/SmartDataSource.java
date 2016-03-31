@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 import org.apache.ibatis.annotations.*;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.aop.MethodBeforeAdvice;
-import example.annotation.PartitionKey;
+import commons.annotation.PartitionKey;
 
 public class SmartDataSource extends AbstractRoutingDataSource {
   public static class ContextHolder {
