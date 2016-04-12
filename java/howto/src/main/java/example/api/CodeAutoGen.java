@@ -127,7 +127,7 @@ public class CodeAutoGen {
   }
 
   String genMapperClassName(String className) {
-    return className + "mapper";
+    return className + "Mapper";
   }
 
   StringBuilder genMapperSelectSql(EntityDesc entityDesc) {
@@ -400,8 +400,7 @@ public class CodeAutoGen {
       .append("/\", method = RequestMethod.POST,\n")
       .append("                  consumes = \"application/x-www-form-urlencoded\")\n");
     sb.append("  public ApiResult add(\n")
-      .append("    @ApiBodyObject @Valid \n")
-      .append(genEntityClassName(source.className))
+      .append("    @ApiBodyObject @Valid ").append(genEntityClassName(source.className))
       .append(" entity, BindingResult bindingResult) {\n");
     sb.append("    if (bindingResult.hasErrors()) {\n");
     sb.append("      return ApiResult.bindingResult(bindingResult);\n");
@@ -603,7 +602,7 @@ public class CodeAutoGen {
   )
   public String getMapperCode(
     @ApiPathParam(name = "type", description = "code type",
-                  allowedvalues = {"mapper", "entity", "controller", "manager", ""})
+                  allowedvalues = {"mapper", "entity", "api", "manager", ""})
     @PathVariable Optional<String> typeOpt,
     
     @ApiQueryParam(name = "dbHostPort", description = "mysql host:port")
@@ -637,7 +636,7 @@ public class CodeAutoGen {
       return genMapperCode(source, getEntityDesc(source));
     } else if (type.equals("entity")) {
       return genEntityCode(source, getEntityDesc(source));
-    } else if (type.equals("controller")) {
+    } else if (type.equals("api")) {
       return genControllerCode(source, getEntityDesc(source));
     } else if (type.equals("manager")) {
       return genManagerCode(source, getEntityDesc(source));

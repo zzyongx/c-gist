@@ -1,0 +1,230 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Data::Dumper;
+use File::Copy;
+use FindBin qw($Bin);
+
+my $cmd = shift or help();
+my %opt = get_opt();
+
+my $GITHUB = "https://github.com/zzyongx/c-gist";
+
+my %route = (
+  init            => \&init_project,
+  'coding-for-me' => \&coding_for_me,
+);
+
+my $sub = $route{$cmd} or help("unknow command $cmd");
+$sub->();
+
+sub init_project {
+  (exists $opt{groupId} && exists $opt{artifactId})
+    or help("groupId and artifactId required");
+
+  my $dir = "$Bin/". $opt{artifactId};
+  mkdir($dir);
+  chdir($dir);
+
+  unless (-d ".c-gist") {
+    system("git clone $GITHUB && mv c-gist .c-gist");
+  }
+
+  my @dirFrame = ("src", "src/test", "src/test/java",
+                  "src/main", "src/main/resources",
+                  "src/main/java");
+  foreach my $dir (@dirFrame) {
+    mkdir($dir);
+  }
+
+  my ($pkg, $pkgDir) = pkg_info($opt{groupId}, $opt{artifactId});
+  `mkdir -p src/main/java/$pkgDir`;
+
+  @dirFrame = ("entity", "manager", "api", "mapper", "model",
+               "config", "config/servlet", "config/jsondoc");
+  foreach my $dir (@dirFrame) {
+    mkdir("src/main/java/$pkgDir/$dir");
+  }
+
+  my $gist = ".c-gist/java/howto";
+  copy_pom("$gist/pom.xml", "pom.xml");
+
+  my $resourceDir = "src/main/resources";
+  copy("$gist/$resourceDir/application-dev.properties",
+       "$resourceDir/application-dev.properties");
+
+  my $srcJavaDir = "$gist/src/main/java/example";
+  my $dstJavaDir = "src/main/java/$pkgDir";
+
+  copy_java($pkg, "$srcJavaDir/config/servlet/WebConfig.java",
+            "$dstJavaDir/config/servlet/WebConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/servlet/WebInitializer.java",
+            "$dstJavaDir/config/servlet/WebInitializer.java", 1);
+
+  copy_java($pkg, "$srcJavaDir/config/JsonDocConfig.java", "$dstJavaDir/config/JsonDocConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
+
+  copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
+                    "$dstJavaDir/config/ProjectInfo.java");
+
+  copy_java($pkg, "$srcJavaDir/model/ApiResult.java", "$dstJavaDir/model/ApiResult.java");
+  copy_java($pkg, "$srcJavaDir/model/Errno.java", "$dstJavaDir/model/Errno.java");
+
+  copy_java($pkg, "$srcJavaDir/api/MemoController.java", "$dstJavaDir/api/MemoController.java");
+  copy_java($pkg, "$srcJavaDir/api/CodeAutoGen.java", "$dstJavaDir/api/CodeAutoGen.java");
+  copy_java($pkg, "$srcJavaDir/api/GlobalExceptionHandler.java",
+            "$dstJavaDir/api/GlobalExceptionHandler.java");
+  copy_java($pkg, "$srcJavaDir/api/EmployeeController.java",
+            "$dstJavaDir/api/EmployeeController.java");
+
+  copy_java($pkg, "$srcJavaDir/manager/MemoManager.java", "$dstJavaDir/manager/MemoManager.java");
+  copy_java($pkg, "$srcJavaDir/mapper/EmployeeMapper.java",
+            "$dstJavaDir/mapper/EmployeeMapper.java");
+
+  copy_java($pkg, "$srcJavaDir/entity/Employee.java", "$dstJavaDir/entity/Employee.java");
+
+  # copy commons
+  `cp -ar $gist/src/main/java/commons src/main/java`;
+}
+
+sub coding_for_me {
+  (exists $opt{dbHostPort} && exists $opt{dbUser} && exists $opt{dbPassword}
+     && exists $opt{table} && exists $opt{className})
+    or die "dbHostPort dbUser dbPassword table className required";
+  exists $opt{httpHost} or $opt{httpHost} = "localhost:8888";
+
+  my ($pkg, $pkgDir);
+  if ($opt{packagePrefix}) {
+    $pkg = $opt{packagePrefix};
+    $pkgDir =~ s|\.|/|g;
+  } else {
+    ($pkg, $pkgDir) = pkg_info();
+    print "is packagePrefix $pkg OK? ";
+    my $answer = <STDIN>;
+    chomp($answer);
+    if ($answer ne 'y') {
+      print "you can use --packagePrefix option\n";
+      exit(0);
+    }
+  }
+
+  my $url = "http://". $opt{httpHost}. "/api/code";
+  my $params = join("&", "dbHostPort=". $opt{dbHostPort}, "dbUser=". $opt{dbUser},
+                    "dbPassword=". $opt{dbPassword}, "table=". $opt{table},
+                    "className=". $opt{className}, "packagePrefix=$pkg");
+  foreach my $target ("mapper", "entity", "api", "manager") {
+    my $className = $opt{className};
+    my $rest = "$url/$target?$params";
+    print "GET $rest\n";
+    my $c = `curl '$rest'`;
+    if ($c =~ /public (class|interface) ($className.+) {/) {
+      $className = $2;
+    }
+    put_file_contents("src/main/java/$pkgDir/$target/$className.java", $c);
+  }
+}
+
+sub pkg_info {
+  my ($groupId, $artifactId) = @_;
+  unless ($groupId && $artifactId) {
+    my $c = get_file_contents("pom.xml");
+    $c =~ m|<groupId>(.+?)</groupId>|;
+    $groupId = $1;
+    $c =~ m|<artifactId>(.+?)</artifactId>|;
+    $artifactId = $1;
+  }
+  unless ($groupId && $artifactId) {
+    die "groupId artifactId required";
+  }
+
+  my $pkg = $groupId;
+  $pkg .= ".". $artifactId if ($groupId ne $artifactId);
+
+  my $pkgDir = $pkg;
+  $pkgDir =~ s|\.|/|g;
+  return ($pkg, $pkgDir);
+}
+
+sub copy_pom {
+  my ($src, $dst) = @_;
+
+  my $c = get_file_contents($src);
+  my ($groupId, $artifactId) = ($opt{groupId}, $opt{artifactId});
+  $c =~ s|<groupId>spring-howto</groupId>|<groupId>$groupId</groupId>|g;
+  $c =~ s|<artifactId>rest-example</artifactId>|<artifactId>$artifactId</artifactId>|g;
+  $c =~ s|<name>rest-example</name>|<name>$artifactId</name>|g;
+  put_file_contents($dst, $c);
+}
+
+sub copy_java {
+  my ($pkg, $src, $dst, $isWebInit) = @_;
+
+  my $c = get_file_contents($src);
+  $c =~ s/package example/package $pkg/g;
+  $c =~ s/import example/import $pkg/g;
+  if ($isWebInit) {
+    $c =~ s/AdvanceDaoConfig.class,//g;
+    $c =~ s/SmartDaoConfig.class//g;
+  }
+  put_file_contents($dst, $c);
+}
+
+sub copy_project_info {
+  my ($pkg, $src, $dst) = @_;
+
+  my $c = get_file_contents($src);
+  $c =~ s/package example/package $pkg/g;
+  $c =~ s/import example/import $pkg/g;
+  $c =~ s/\"example/\"$pkg/g;
+  put_file_contents($dst, $c);
+}
+
+sub help {
+  my $error = shift;
+  my $fh = *STDOUT;
+  if ($error) {
+    $fh = *STDERR;
+    print {$fh} $error, "\n";
+  }
+  print {$fh} "$0 COMMAND [ARGS]\n";
+  print {$fh} "COMMAND LIST\n";
+  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID\n";
+  print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
+  print {$fh} "\n";
+  print {$fh} "coding-for-me --dbHostPort=HOST:PORT --dbUser=USER --dbPassword=PASSWORD --table=TABLE --className=CLASS_NAME --httpHost=localhost:8888 --packagePrefix=GROUP_ID.ARTIFACT_ID\n";
+  print {$fh} "  $0 coding-for-me --dbHostPort=localhost:3306 --dbUser=user --dbPassword=pass --table=order --className=Order\n";
+
+  exit($error ? -1 : 0);
+}
+
+sub get_opt {
+  my %opt;
+  foreach my $arg (@ARGV) {
+    if ($arg =~ /--([^=]+)=([^=]+)/) {
+      $opt{$1} = $2;
+    } elsif ($arg =~ /--([^=]+)/) {
+      $opt{$1} = 1;
+    } else {
+      print STDERR "invalid opt $arg\n";
+    }
+  }
+  return %opt;
+}
+
+sub get_file_contents {
+  my $f = shift;
+  open(my $fh, "<$f") or die "open $f $!";
+  my $c = join("", <$fh>);
+  close($fh);
+  return $c;
+}
+
+sub put_file_contents {
+  my $f = shift;
+  my $c = shift;
+  open(my $fh, ">$f") or die "open $f $!";
+  print {$fh} $c;
+  close($fh);
+}
