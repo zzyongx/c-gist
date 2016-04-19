@@ -12,7 +12,7 @@ import org.springframework.format.Formatter;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
-import commons.spring.ListObjectFormatter;
+import commons.spring.AnalogueJsonObjectFormatter;
 
 @Api(
   name = "rest server",
@@ -58,15 +58,13 @@ public class RestServer {
     return String.join(",", colorCodes);
   }
 
-  // /color/name:Gray,code:808080;name:Navy,code:000080
+  // /color/name:Gray,code:808080
   @ApiMethod(description = "add color item")
-  @RequestMapping(value = "/color/{colors}", method = RequestMethod.PUT)
+  @RequestMapping(value = "/color/{color}", method = RequestMethod.PUT)
   public void addColorByPath(
-    @ApiPathParam(name = "colors", description = "color list")
-    @PathVariable List<Color> colors) {
-    for (Color color : colors) {
-      colorTable.put(color.name, "#" + color.code);
-    }
+    @ApiPathParam(name = "color", description = "color")
+    @PathVariable Color color) {
+    colorTable.put(color.name, "#" + color.code);
   }
 
   public static class ColorList extends ArrayList<Color> {}
@@ -89,6 +87,6 @@ public class RestServer {
 
   @InitBinder
   public void initBinder(WebDataBinder binder) {
-    binder.addCustomFormatter(new ListObjectFormatter<Color>(Color.class));
+    binder.addCustomFormatter(new AnalogueJsonObjectFormatter<Color>(Color.class), Color.class);
   }
 }

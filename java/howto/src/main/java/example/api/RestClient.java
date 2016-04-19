@@ -64,7 +64,7 @@ public class RestClient {
     return new ApiResult<Map>(colors);
   }
 
-  // /color/name:Gray,code:808080;name:Navy,code:000080
+  // /color/name:Gray,code:808080
   @ApiMethod(description = "add color item")
   @RequestMapping(value = "/color/{colors}", method = RequestMethod.PUT)
   public ApiResult addColorByPath(
