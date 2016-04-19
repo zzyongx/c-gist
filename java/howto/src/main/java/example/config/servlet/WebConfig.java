@@ -11,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import commons.spring.ListObjectHttpMessageConverter;
 import example.config.*;
 
 @Configuration
@@ -20,7 +21,6 @@ public class WebConfig extends WebMvcConfigurerAdapter {
   @Override
   public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
     converters.add(new StringHttpMessageConverter());
-    converters.add(new FormHttpMessageConverter());
       
     Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -28,7 +28,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
     builder.serializationInclusion(JsonInclude.Include.NON_NULL);
     converters.add(new MappingJackson2HttpMessageConverter(builder.build()));
 
-//    converters.add(new CsvMessageConverter());
+    converters.add(new ListObjectHttpMessageConverter());
   }
 
   @Bean

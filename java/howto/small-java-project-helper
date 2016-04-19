@@ -16,8 +16,9 @@ my %route = (
   'coding-for-me' => \&coding_for_me,
 );
 
-my $sub = $route{$cmd} or help("unknow command $cmd");
-$sub->();
+our $isWebInit    = 0x0001;
+our $isRootConfig = 0x0002;
+our $withSecurity = 0x0100;
 
 sub init_project {
   (exists $opt{groupId} && exists $opt{artifactId})
@@ -60,10 +61,19 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/config/servlet/WebConfig.java",
             "$dstJavaDir/config/servlet/WebConfig.java");
   copy_java($pkg, "$srcJavaDir/config/servlet/WebInitializer.java",
-            "$dstJavaDir/config/servlet/WebInitializer.java", 1);
+            "$dstJavaDir/config/servlet/WebInitializer.java",
+            $opt{withSecurity} ? ($isWebInit | $withSecurity) : $isWebInit);
+
+  if ($opt{withSecurity}) {
+    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityConfig.java",
+              "$dstJavaDir/config/servlet/SecurityConfig.java");
+    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityInitializer.java",
+              "$dstJavaDir/config/servlet/SecurityInitializer.java");
+  }
 
   copy_java($pkg, "$srcJavaDir/config/JsonDocConfig.java", "$dstJavaDir/config/JsonDocConfig.java");
-  copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java",
+            $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
   copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
 
   copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
@@ -87,6 +97,7 @@ sub init_project {
 
   # copy commons
   `cp -ar $gist/src/main/java/commons src/main/java`;
+  put_file_contents(".gitignore", "lib\ntarget\n");
 }
 
 sub coding_for_me {
@@ -159,14 +170,27 @@ sub copy_pom {
 }
 
 sub copy_java {
-  my ($pkg, $src, $dst, $isWebInit) = @_;
+  my ($pkg, $src, $dst, $copyFlag) = @_;
 
   my $c = get_file_contents($src);
   $c =~ s/package example/package $pkg/g;
   $c =~ s/import example/import $pkg/g;
-  if ($isWebInit) {
-    $c =~ s/AdvanceDaoConfig.class,//g;
-    $c =~ s/SmartDaoConfig.class//g;
+  if (defined $copyFlag) {
+    if ($copyFlag & $isWebInit) {
+      $c =~ s/AdvanceDaoConfig.class,//g;
+      $c =~ s/SmartDaoConfig.class//g;
+
+      if (!($copyFlag & $withSecurity)) {
+        $c =~ s/SecurityConfig.class,//g;
+      }
+    }
+
+    if ($copyFlag & $isRootConfig) {
+      if (!($copyFlag & $withSecurity)) {
+        $c =~ s/import.+?RememberMeService;//g;
+        $c =~ s|// TAG:RememberMeService.+?\}||sg;
+      }
+    }
   }
   put_file_contents($dst, $c);
 }
@@ -190,7 +214,7 @@ sub help {
   }
   print {$fh} "$0 COMMAND [ARGS]\n";
   print {$fh} "COMMAND LIST\n";
-  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID\n";
+  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity\n";
   print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
   print {$fh} "\n";
   print {$fh} "coding-for-me --dbHostPort=HOST:PORT --dbUser=USER --dbPassword=PASSWORD --table=TABLE --className=CLASS_NAME --httpHost=localhost:8888 --packagePrefix=GROUP_ID.ARTIFACT_ID\n";
@@ -228,3 +252,6 @@ sub put_file_contents {
   print {$fh} $c;
   close($fh);
 }
+
+my $sub = $route{$cmd} or help("unknow command $cmd");
+$sub->();

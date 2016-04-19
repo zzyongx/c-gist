@@ -183,6 +183,7 @@
         <configuration>
           <compilerArgs>
             <arg>-Xlint:unchecked</arg>
+            <arg>-Xlint:deprecation</arg>
           </compilerArgs>
           <source>${java.version}</source>
           <target>${java.version}</target>

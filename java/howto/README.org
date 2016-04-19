@@ -1,0 +1,20 @@
+* System requirements
+config file =src/main/resources/application-dev.properties=
+- redis 
+- mysql
+
+** MySQL table
+#+BEGIN_SRC sql
+CREATE TABLE employee (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, 
+  name VARCHAR(10) NOT NULL,
+  department VARCHAR(16), 
+  position VARCHAR(16), 
+  phone INT
+);
+GRANT ALL ON test.* TO 'howto'@'localhost' IDENTIFIED BY 'c8kFuH4iR9y5PaMbJ5aU';
+FLUSH PRIVILEGES;
+#+END_SRC
+
+* Run
+mvn compile package jetty:run -Dspring.profiles.active=dev
