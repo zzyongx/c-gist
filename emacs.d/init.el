@@ -2,7 +2,7 @@
 ;; ln -s PATH/.emacs.d ~/.emacs.d
 ;; mkdir ~/.emcas/site-lisp
 
-;; (setq debug-on-error t)
+ (setq debug-on-error t)
 
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
@@ -27,6 +27,7 @@
 (require 'init-javascript)
 (require 'init-lua)
 (require 'init-scala)
+(require 'init-groovy)
 (require 'init-php)
 (require 'init-haskell)
 
@@ -95,6 +96,8 @@
 ;; coding system
 ;; M-x describe-coding-system
 ;; M-x universal-coding-system-argument
+
+;; M-x org-version
 
 ;; move around window
 (global-set-key [M-left]  'windmove-left)

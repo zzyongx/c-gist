@@ -1,3 +1,6 @@
+;; (require 'package)
+;; (add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
+
 (require-package 'htmlize)
 (org-babel-do-load-languages
  'org-babel-load-languages
