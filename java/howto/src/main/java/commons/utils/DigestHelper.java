@@ -1,6 +1,8 @@
 package commons.utils;
 
 import java.security.MessageDigest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Hex;
 
 public class DigestHelper {
@@ -11,7 +13,7 @@ public class DigestHelper {
       crypt.update(input);
       return Hex.encodeHexString(crypt.digest());
     } catch (Exception e) {
-      throw new RuntimeException("SHA-1 ENV config error");
+      throw new RuntimeException(e);
     }
   }
 
@@ -19,8 +21,23 @@ public class DigestHelper {
     try {
       MessageDigest md = MessageDigest.getInstance("MD5");
       return Hex.encodeHexString(md.digest(input));
-    } catch (Exception exception) {
-      throw new RuntimeException("MD5 config error");
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static String hmacSHA1(String key, byte[] value) {
+    try {
+      byte[] keyBytes = key.getBytes();
+      SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(), "HmacSHA1");
+
+      Mac mac = Mac.getInstance("HmacSHA1");
+      mac.init(keySpec);
+
+      byte[] rawHmac = mac.doFinal(value);
+      return Hex.encodeHexString(mac.doFinal(value));
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }

@@ -18,9 +18,8 @@ public interface EmployeeMapper {
     public static String selectByName(Map<String, Object> param) {
       SQL sql = new SQL().SELECT("*").FROM(TABLE)
         .WHERE("name = #{name}");
-      
-      Employee.Gender gender = (Employee.Gender) param.get("gender");
-      if (gender != null) {
+
+      if (param.containsKey("gender")) {
         //sql.AND().WHERE("gender = #{gender,typeHandler=example.config.EnumValueTypeHandler}");
         sql.AND().WHERE("gender = #{gender}");
       }
