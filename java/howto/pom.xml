@@ -130,6 +130,16 @@
       <artifactId>mybatis-spring</artifactId>
       <version>1.2.2</version>
     </dependency>
+    <dependency>
+      <groupId>org.patchca</groupId>
+      <artifactId>patchca</artifactId>
+      <version>0.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.qcloud</groupId>
+      <artifactId>qcloud-sdk</artifactId>
+      <version>2.1.2</version>
+    </dependency>
     
     <dependency>
       <groupId>junit</groupId>

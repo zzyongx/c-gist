@@ -108,7 +108,7 @@ sub coding_for_me {
 
   my ($pkg, $pkgDir);
   if ($opt{packagePrefix}) {
-    $pkg = $opt{packagePrefix};
+    $pkgDir = $pkg = $opt{packagePrefix};
     $pkgDir =~ s|\.|/|g;
   } else {
     ($pkg, $pkgDir) = pkg_info();
@@ -116,7 +116,7 @@ sub coding_for_me {
     my $answer = <STDIN>;
     chomp($answer);
     if ($answer ne 'y') {
-      print "you can use --packagePrefix option\n";
+      print "you can use --packagePrefix=packagePrefix option\n";
       exit(0);
     }
   }
@@ -129,7 +129,7 @@ sub coding_for_me {
     my $className = $opt{className};
     my $rest = "$url/$target?$params";
     print "GET $rest\n";
-    my $c = `curl '$rest'`;
+    my $c = `curl '$rest' 2>/dev/null`;
     if ($c =~ /public (class|interface) ($className.+) {/) {
       $className = $2;
     }

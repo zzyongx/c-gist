@@ -15,7 +15,7 @@ public class WebInitializer extends AbstractAnnotationConfigDispatcherServletIni
   
   @Override
   protected Class<?>[] getServletConfigClasses() {
-    return new Class<?>[] { WebConfig.class, JsonDocConfig.class };
+    return new Class<?>[] { WebConfig.class, JsonDocConfig.class, AutoCodeConfig.class };
   }
 
   @Override
@@ -26,6 +26,6 @@ public class WebInitializer extends AbstractAnnotationConfigDispatcherServletIni
   @Override
   protected void customizeRegistration(Dynamic registration) {
     registration.setMultipartConfig(
-      new MultipartConfigElement("/tmp", 1500_000, 1500_000, 1500_000));
+      new MultipartConfigElement("/tmp", 2500_000, 2500_000, 2500_000));
   }
 }
