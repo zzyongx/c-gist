@@ -35,6 +35,7 @@ public class XiaopLoginService extends LoginService {
     LoginService.User user = new LoginService.User();
     user.setOpenId("xiaop_" + ret.data.uid);
     user.setName(ret.data.name);
+    user.setHeadImg("https://puboa.sogou-inc.com/moa/sylla/mapi/portrait?uid=" + ret.data.uid);
 
     HashMap<String, String> map = new HashMap<>();
     map.put("tel", ret.data.tel);
