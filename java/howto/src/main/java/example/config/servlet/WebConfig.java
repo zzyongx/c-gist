@@ -22,7 +22,9 @@ import example.config.*;
 public class WebConfig extends WebMvcConfigurerAdapter {
   @Override
   public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-    converters.add(new StringHttpMessageConverter());
+    StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
+    stringConverter.setWriteAcceptCharset(false);
+    converters.add(stringConverter);    
       
     Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -31,8 +33,6 @@ public class WebConfig extends WebMvcConfigurerAdapter {
     builder.serializerByType(LocalDateTime.class, new LocalDateTimeJsonSerializer());
     builder.serializerByType(LocalDate.class, new LocalDateJsonSerializer());
     converters.add(new MappingJackson2HttpMessageConverter(builder.build()));
-
-    // converters.add(new ListObjectHttpMessageConverter());
   }
 
   @Bean

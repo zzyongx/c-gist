@@ -50,10 +50,13 @@ sub init_project {
 
   my $gist = ".c-gist/java/howto";
   copy_pom("$gist/pom.xml", "pom.xml");
+  copy("$gist/findbugs-exclude.xml", "findbugs-exclude.xml");
 
   my $resourceDir = "src/main/resources";
   copy("$gist/$resourceDir/application-dev.properties",
        "$resourceDir/application-dev.properties");
+  copy("$gist/$resourceDir/application-default.properties",
+       "$resourceDir/application-default.properties");
 
   my $srcJavaDir = "$gist/src/main/java/example";
   my $dstJavaDir = "src/main/java/$pkgDir";
@@ -71,6 +74,7 @@ sub init_project {
               "$dstJavaDir/config/servlet/SecurityInitializer.java");
   }
 
+  copy_java($pkg, "$srcJavaDir/config/AutoCodeConfig.java", "$dstJavaDir/config/AutoCodeConfig.java");
   copy_java($pkg, "$srcJavaDir/config/JsonDocConfig.java", "$dstJavaDir/config/JsonDocConfig.java");
   copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java",
             $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
@@ -83,7 +87,6 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/model/Errno.java", "$dstJavaDir/model/Errno.java");
 
   copy_java($pkg, "$srcJavaDir/api/MemoController.java", "$dstJavaDir/api/MemoController.java");
-  copy_java($pkg, "$srcJavaDir/api/CodeAutoGen.java", "$dstJavaDir/api/CodeAutoGen.java");
   copy_java($pkg, "$srcJavaDir/api/GlobalExceptionHandler.java",
             "$dstJavaDir/api/GlobalExceptionHandler.java");
   copy_java($pkg, "$srcJavaDir/api/EmployeeController.java",
@@ -97,14 +100,14 @@ sub init_project {
 
   # copy commons
   `cp -ar $gist/src/main/java/commons src/main/java`;
-  put_file_contents(".gitignore", "lib\ntarget\n");
+  put_file_contents(".gitignore", "target\n");
 }
 
 sub coding_for_me {
   (exists $opt{dbHostPort} && exists $opt{dbUser} && exists $opt{dbPassword}
      && exists $opt{table} && exists $opt{className})
     or die "dbHostPort dbUser dbPassword table className required";
-  exists $opt{httpHost} or $opt{httpHost} = "localhost:8888";
+  exists $opt{httpHost} or $opt{httpHost} = "localhost";
 
   my ($pkg, $pkgDir);
   if ($opt{packagePrefix}) {
@@ -119,19 +122,25 @@ sub coding_for_me {
       print "you can use --packagePrefix=packagePrefix option\n";
       exit(0);
     }
+    $opt{packagePrefix} = $pkg;
   }
 
   my $url = "http://". $opt{httpHost}. "/api/code";
-  my $params = join("&", "dbHostPort=". $opt{dbHostPort}, "dbUser=". $opt{dbUser},
-                    "dbPassword=". $opt{dbPassword}, "table=". $opt{table},
-                    "className=". $opt{className}, "packagePrefix=$pkg");
-  foreach my $target ("mapper", "entity", "api", "manager") {
+  my $params = join("&", map { $_. "=". $opt{$_} } keys %opt);
+  my @targets = ("mapper", "entity");
+  push(@targets, "api", "manager") unless ($opt{nopublic});
+
+  foreach my $target (@targets) {
     my $className = $opt{className};
     my $rest = "$url/$target?$params";
     print "GET $rest\n";
     my $c = `curl '$rest' 2>/dev/null`;
-    if ($c =~ /public (class|interface) ($className.+) {/) {
-      $className = $2;
+    if ($c =~ /public (class|interface)/) {
+      if ($c =~ /public (class|interface) ($className.+) {/) {
+        $className = $2;
+      }
+    } else {
+      die "auto code error\n$c";
     }
     put_file_contents("src/main/java/$pkgDir/$target/$className.java", $c);
   }
@@ -217,7 +226,7 @@ sub help {
   print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity\n";
   print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
   print {$fh} "\n";
-  print {$fh} "coding-for-me --dbHostPort=HOST:PORT --dbUser=USER --dbPassword=PASSWORD --table=TABLE --className=CLASS_NAME --httpHost=localhost:8888 --packagePrefix=GROUP_ID.ARTIFACT_ID\n";
+  print {$fh} "coding-for-me use `curl http://localhost/api/code/help` for help\n";
   print {$fh} "  $0 coding-for-me --dbHostPort=localhost:3306 --dbUser=user --dbPassword=pass --table=order --className=Order\n";
 
   exit($error ? -1 : 0);

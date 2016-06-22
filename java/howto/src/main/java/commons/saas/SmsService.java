@@ -4,8 +4,8 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Jedis;
 
 public abstract class SmsService {
-  public static String CODE_PREFIX = "SmsService_";
-  public static String CODE_SEND_PREFIX = "SmsServiceSend_";
+  public static final String CODE_PREFIX = "SmsService_";
+  public static final String CODE_SEND_PREFIX = "SmsServiceSend_";
   
   private JedisPool jedisPool;
   

@@ -34,13 +34,4 @@ public class PatchcaService {
       return c.get(PATCHCA_PREFIX + id);
     }
   }
-
-  public boolean checkText(String id, String value) {
-    try (Jedis c = jedisPool.getResource()) {
-      String key = PATCHCA_PREFIX + id;
-      boolean r = value.equalsIgnoreCase(c.get(key));
-      c.del(key);
-      return r;
-    }
-  }
 }

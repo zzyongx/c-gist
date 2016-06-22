@@ -21,23 +21,36 @@ public class RedisRememberMeService implements RememberMeServices {
     private String           name;
     private int              incId; 
     private List<Long>       permIds;
+    private boolean          internal;
+
+    public static User internal() {
+      User user = new User(0, "__", 0, Arrays.asList(1L));      
+      user.internal = true;
+      return user;
+    }      
 
     public User(long uid, String name) {
       this(uid, name, Integer.MIN_VALUE, null);
     }
 
     public User(long uid, String name, int incId, List<Long> permIds) {
-      this.uid     = Optional.of(uid);
-      this.name    = name;
-      this.incId   = incId;
-      this.permIds = permIds;
+      this.uid      = Optional.of(uid);
+      this.name     = name;
+      this.incId    = incId;
+      this.permIds  = permIds;
+      this.internal = false;
     }
 
     public User(String openId, String name) {
-      this.openId = Optional.of(openId);
-      this.name   = name;
-      this.incId  = Integer.MIN_VALUE;
-      this.permIds = null;
+      this(openId, name, Integer.MIN_VALUE, null);
+    }
+
+    public User(String openId, String name, int incId, List<Long> permIds) {
+      this.openId   = Optional.of(openId);
+      this.name     = name;
+      this.incId    = incId;
+      this.permIds  = permIds;
+      this.internal = false;
     }
 
     public boolean isOpen() {
@@ -67,6 +80,10 @@ public class RedisRememberMeService implements RememberMeServices {
 
     public String getIncIdString() {
       return incId == Integer.MIN_VALUE ? "" : String.valueOf(incId);
+    }
+
+    public boolean isInternal() {
+      return internal;
     }
 
     public boolean isPlatformBoss() {
@@ -115,7 +132,7 @@ public class RedisRememberMeService implements RememberMeServices {
     public String perms;
 
     public boolean beforeExpire(int maxAge) {
-      long createAt = Long.valueOf(this.createAt);
+      long createAt = Long.parseLong(this.createAt);
       long now = System.currentTimeMillis()/1000;
       if (createAt + maxAge/2 < now) {
         this.createAt = Long.toString(now);
@@ -157,23 +174,26 @@ public class RedisRememberMeService implements RememberMeServices {
     }
 
     public String toString() {
+      if (name.indexOf(':') != -1) name = name.replace(':', '_');
       return String.join(":", uid, token, name, createAt, incId, perms);
     }
 
     public User toUser() {
-      if (uid.indexOf('_') != -1) {
-        return new User(uid, name);
-      } else if (incId.isEmpty()) {
-        return new User(Long.valueOf(uid), name);
-      } else {
-        List<Long> permIds = null;
-        if (!perms.isEmpty()) {
+      int userIncId = Integer.MIN_VALUE;
+      List<Long> permIds = null;
+
+      if (!incId.isEmpty()) userIncId = Integer.parseInt(incId);
+      if (!perms.isEmpty()) {
           permIds = new ArrayList<>();
           for (String part : perms.split(",")) {
-            permIds.add(Long.valueOf(part));
+            permIds.add(Long.parseLong(part));
           }
-        }
-        return new User(Long.valueOf(uid), name, Integer.valueOf(incId), permIds);
+      }
+      
+      if (uid.indexOf('_') != -1) {
+        return new User(uid, name, userIncId, permIds);
+      } else {
+        return new User(Long.parseLong(uid), name, userIncId, permIds);
       }
     }
   }
@@ -183,6 +203,11 @@ public class RedisRememberMeService implements RememberMeServices {
   private String    domain;
   private int       maxAge;
   private static final String KEY_PREFIX   = "RedisRMS_";
+  private static final User internalUser = User.internal();
+  private static List<GrantedAuthority> internalGrantedAuths = Arrays.asList(
+    new SimpleGrantedAuthority("ROLE_SYSINTERNAL")
+    );
+  
 
   public RedisRememberMeService(JedisPool jedisPool, String domain, int maxAge) {
     this(jedisPool, "", domain, maxAge);
@@ -304,12 +329,7 @@ public class RedisRememberMeService implements RememberMeServices {
     }
     if (queryString == null || !tokenPool.contains(queryString)) return null;
 
-    User user = new User("__", "__token");
-    List<GrantedAuthority> grantedAuths = Arrays.asList(
-      new SimpleGrantedAuthority("ROLE_SYSINTERNAL")
-      );
-    
-    return new RememberMeAuthenticationToken("N/A", user, grantedAuths);
+    return new RememberMeAuthenticationToken("N/A", internalUser, internalGrantedAuths);
   }
 
   Authentication autoLoginByRedisPool(HttpServletRequest request) {

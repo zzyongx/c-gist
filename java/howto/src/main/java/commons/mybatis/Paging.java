@@ -66,6 +66,15 @@ public class Paging extends HashMap<String, Object> {
     return this;
   }
 
+  public Paging andWhere(String where) {
+    if (this.where == null) {
+      this.where = where;
+    } else {
+      this.where = this.where + " AND " + where;
+    }
+    return this;
+  }
+
   public Paging setFields(String fields) {
     this.fields = fields;
     return this;

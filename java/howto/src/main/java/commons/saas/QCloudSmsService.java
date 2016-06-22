@@ -1,6 +1,7 @@
 package commons.saas;
 
 import java.util.Arrays;
+import java.nio.charset.Charset;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,6 +38,7 @@ class SendSmsRespBody {
 }
 
 public class QCloudSmsService extends SmsService {
+  private static final Charset charset = Charset.forName("UTF-8");
   private String appkey;
   private String uri;
 
@@ -50,7 +52,7 @@ public class QCloudSmsService extends SmsService {
     SendSmsReqBody reqBody = new SendSmsReqBody();
     reqBody.tel = new Phone(phone);
     reqBody.msg = msg;
-    reqBody.sig = DigestHelper.md5((appkey + phone).getBytes());
+    reqBody.sig = DigestHelper.md5((appkey + phone).getBytes(charset));
 
     RestTemplate restTemplate = new RestTemplate();
 

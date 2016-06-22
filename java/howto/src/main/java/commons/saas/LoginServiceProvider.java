@@ -24,8 +24,8 @@ public class LoginServiceProvider {
 
   public void register(Name name, LoginService service) {
     switch (name) {
-    case XiaoP: xiaop = service;
-    case WeiXin: weixin = service;
+    case XiaoP: xiaop = service; break;
+    case WeiXin: weixin = service; break;
     }
   }
 }
