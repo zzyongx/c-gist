@@ -2,7 +2,6 @@ package example.api;
 
 import javax.sql.DataSource;
 import java.util.*;
-import javax.validation.Valid;
 import org.jsondoc.core.annotation.*;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;

@@ -1,5 +1,5 @@
 <FindBugsFilter>
   <Match>
-    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,REC_CATCH_EXCEPTION"/>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,REC_CATCH_EXCEPTION,DM_DEFAULT_ENCODING"/>
   </Match>
 </FindBugsFilter>

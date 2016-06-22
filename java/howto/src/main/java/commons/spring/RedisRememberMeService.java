@@ -231,10 +231,6 @@ public class RedisRememberMeService implements RememberMeServices {
     return cookie;
   }    
 
-  private String cacheKey(long uid) {
-    return KEY_PREFIX + String.valueOf(uid);
-  }
-
   private String cacheKey(String uid) {
     return KEY_PREFIX + uid;
   }

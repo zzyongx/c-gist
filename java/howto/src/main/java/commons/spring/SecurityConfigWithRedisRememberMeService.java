@@ -106,10 +106,8 @@ public class SecurityConfigWithRedisRememberMeService extends WebSecurityConfigu
     http.exceptionHandling()
       .authenticationEntryPoint(new RestAuthenticationEntryPoint());
 
-    if (!configUrlPermit(http, true)) {
-      if (!configUrlPermit(http, false)) {
-        configSitePermit(http);
-      }
+    if (!configUrlPermit(http, true) && !configUrlPermit(http, false)) {
+      configSitePermit(http);
     }
 
     http.rememberMe().rememberMeServices(rms);

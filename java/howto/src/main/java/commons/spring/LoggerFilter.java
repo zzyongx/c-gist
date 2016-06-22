@@ -21,10 +21,15 @@ public class LoggerFilter implements Filter {
   private boolean logError;
 
   public LoggerFilter(Environment env) {
-    logHttpGet    = Boolean.parseBoolean(env.getProperty("logfilter.get", "false"));
-    logHttpPost   = Boolean.parseBoolean(env.getProperty("logfilter.post", "false"));
-    logHttpPut    = Boolean.parseBoolean(env.getProperty("logfilter.put", "false"));
-    logHttpDelete = Boolean.parseBoolean(env.getProperty("logfilter.delete", "false"));
+    String def = "false";
+    if (env.acceptsProfiles("dev") || env.acceptsProfiles("test")) {
+      def = "true";
+    }
+      
+    logHttpGet    = Boolean.parseBoolean(env.getProperty("logfilter.get", def));
+    logHttpPost   = Boolean.parseBoolean(env.getProperty("logfilter.post", def));
+    logHttpPut    = Boolean.parseBoolean(env.getProperty("logfilter.put", def));
+    logHttpDelete = Boolean.parseBoolean(env.getProperty("logfilter.delete", def));
     logError      = Boolean.parseBoolean(env.getProperty("logfilter.error", "true"));
   }
 
@@ -64,7 +69,7 @@ public class LoggerFilter implements Filter {
   }
   
   @ManagedAttribute(description="The logHttpDelete Attribute")
-  public void setLogHttpDelete(boolean logHttpGet) {
+  public void setLogHttpDelete(boolean logHttpDelete) {
     this.logHttpDelete = logHttpDelete;
   }
   
@@ -87,16 +92,16 @@ public class LoggerFilter implements Filter {
   }
 
   boolean ifLog(String method, HttpServletRequest req) {
-    if ((logHttpGet && method.equals("GET")) ||
-        (logHttpDelete && method.equals("DELETE"))) {
+    if (logHttpGet && method.equals("GET") ||
+        logHttpDelete && method.equals("DELETE")) {
       return true;
-    } else if ((logHttpPost && method.equals("POST")) ||
+    } else if (logHttpPost && method.equals("POST") ||
                logHttpPut && method.equals("PUT")) {
       String contentType = req.getContentType();
       if (contentType != null &&
           (contentType.equals("application/x-www-form-urlencoded") ||
-           contentType.equals("multipart/form-data") ||
-           contentType.equals("application/json"))) {
+          contentType.equals("multipart/form-data") ||
+          contentType.equals("application/json"))) {
         return true;
       }
     }
@@ -140,7 +145,7 @@ public class LoggerFilter implements Filter {
       respBody = (String) request.getAttribute("ApiResultError");
     }
 
-    if (log || (logError && respBody != null)) {
+    if (log || logError && respBody != null) {
       String queryStr = req.getQueryString();
       if (queryStr == null) queryStr = "-";
       
@@ -152,7 +157,6 @@ public class LoggerFilter implements Filter {
   private static class ResettableStreamHttpServletRequest extends
     HttpServletRequestWrapper {
 
-    private byte[] rawData;
     private ServletInputStreamImpl servletStream;
 
     public ResettableStreamHttpServletRequest(HttpServletRequest request, byte[] rawData) {
@@ -170,7 +174,7 @@ public class LoggerFilter implements Filter {
       return new BufferedReader(new InputStreamReader(servletStream));
     }
     
-    private class ServletInputStreamImpl extends ServletInputStream {
+    private static class ServletInputStreamImpl extends ServletInputStream {
       private InputStream stream;
 
       public ServletInputStreamImpl(byte[] rawData) {
@@ -226,7 +230,7 @@ public class LoggerFilter implements Filter {
       return new PrintWriter(servletStream.stream, true);
     }
 
-    private class ServletOutputStreamImpl extends ServletOutputStream {
+    private static class ServletOutputStreamImpl extends ServletOutputStream {
       private ByteArrayOutputStream stream;
 
       public ServletOutputStreamImpl() {

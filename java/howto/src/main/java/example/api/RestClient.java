@@ -21,14 +21,14 @@ public class RestClient {
     public String getVersion() {
       return version;
     }
-    public void setVersion() {
+    public void setVersion(String version) {
       this.version = version;
     }
 
     public String getLicense() {
       return license;
     }
-    public void setLicense() {
+    public void setLicense(String license) {
       this.license = license;
     }
   }

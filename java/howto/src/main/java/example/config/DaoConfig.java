@@ -6,7 +6,6 @@ import com.alibaba.druid.pool.DruidDataSource;
 import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.type.TypeHandler;
 import org.springframework.beans.factory.annotation.Autowired;

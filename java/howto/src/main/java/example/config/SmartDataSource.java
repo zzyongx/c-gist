@@ -66,7 +66,6 @@ public class SmartDataSource extends AbstractRoutingDataSource {
         for (int i = 0; i < args.length && !found; ++i) {
           for (int j = 0; j < annotations[i].length && !found; ++j) {
             if (annotations[i][j].annotationType().isAssignableFrom(PartitionKey.class)) {
-              PartitionKey pk = (PartitionKey) annotations[i][j];
               if (argTyps[i].isPrimitive()) {
                 id = (long) args[i];
               } else {

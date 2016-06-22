@@ -124,7 +124,7 @@ public class EchoController {
     @RequestHeader("password") Optional<String> pass) {
     Profile profile = new Profile();
     profile.name = "bob";
-    if (uid.isPresent() || (user.isPresent() && pass.isPresent())) {
+    if (uid.isPresent() || user.isPresent() && pass.isPresent()) {
       profile.phone = "31415926535";
       return profile;
     } else {

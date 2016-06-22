@@ -2,7 +2,6 @@ package example.api;
 
 import com.google.common.base.Throwables;
 import org.springframework.beans.*;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.dao.DataAccessException;
@@ -47,9 +46,4 @@ public class GlobalExceptionHandler {
   public ApiResult typeMismatchException(Exception e) {
     return new ApiResult(Errno.BAD_REQUEST, e.toString());
   }
-
-  // @InitBinder
-  // public void initBinder(WebDataBinder binder) {
-  //   binder.registerCustomEditor(int.class, new CustomNullNumberEditor(Integer.class));
-  // }
 }

@@ -333,8 +333,8 @@ public class CodeAutoGen {
 
       if (field.isKey || field.isUid || field.isImmut) {
         cw.write(2, "sql.VALUES('%s', '#{%s}');", fieldVar, fieldVar);
-      } else if (field.timestamp) {
-        if (!field.autoUpdate) cw.write(2, "sql.VALUES('%s', 'NULL');", fieldVar);
+      } else if (field.timestamp && !field.autoUpdate) {
+        cw.write(2, "sql.VALUES('%s', 'NULL');", fieldVar);
       } 
     }
     cw.newLine();
@@ -625,7 +625,7 @@ public class CodeAutoGen {
     }
 
     for (FieldDesc f : entityDesc.fields) {
-      if (f.name.equals(primaryKey) || (f.timestamp && f.autoUpdate) ||
+      if (f.name.equals(primaryKey) || f.timestamp && f.autoUpdate ||
           f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
 
       cw.write(2, "@ApiQueryParam(name = '%s', description = '%s', required = false)",
@@ -651,7 +651,7 @@ public class CodeAutoGen {
       .write(2, "%s %s = new %s();", source.entityClazz, source.entityVar, source.entityClazz);
                
     for (FieldDesc f : entityDesc.fields) {
-      if ((f.timestamp && f.autoUpdate) ||
+      if (f.timestamp && f.autoUpdate ||
           f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
       
       if (f.name.equals(primaryKey)) {
