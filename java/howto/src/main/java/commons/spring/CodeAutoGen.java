@@ -22,59 +22,102 @@ public class CodeAutoGen {
     public String dbUser;
     public String dbPassword;
     public String table;
+    public String shortTable;
     public String className;
     public String packagePrefix;
     public boolean security;
+    public boolean nontrans;
+    public boolean nopaging;
+    public boolean nopublic;
+
+    public String entityClazz;
+    public String entityVar;
+    public String mapperClazz;
+    public String mapperVar;
+    public String managerClazz;
+    public String managerVar;
+    public String controllerClazz;
   }
 
   public static class FieldDesc {
     public String  name;
     public String  type;
+    public String  size;
     public boolean isPrimary;
     public boolean isAutoIncrement;
     public boolean isKey;
     public boolean timestamp;
     public boolean autoUpdate;
+    
     public boolean isEnum;
+    public boolean isImmut;
+    public boolean isUid;
+    public boolean isDelay;
+    public boolean isInternal;
 
     private FieldDesc() {
       isPrimary = isAutoIncrement = isKey = false;
       timestamp = autoUpdate = false;
-      isEnum = false;
+      isEnum = isImmut = isUid = isDelay = isInternal = false;
     }
 
-    private static String detectTypeTip(String tableSql, String field) {
+    private void fixWithTips(String tableSql, String field) {
       String[] lines = tableSql.split("\n");
       for (String line : lines) {
-        if (line.indexOf(field) != -1) {
-          if (line.indexOf("COMMENT") != -1 && line.indexOf("'enum'") != -1) {
-            return "enum";
+        int tipStart;
+        if (line.indexOf('`' + field + '`') != -1 && (tipStart = line.indexOf("COMMENT")) != -1) {
+          int start = line.indexOf('\'', tipStart);
+          int end   = start == -1 ? -1 : line.indexOf('\'', start+1);
+          if (start == -1 || end == -1) return;
+
+          String tips[] = line.substring(start+1, end).split(",");
+          for (String tip : tips) {
+            if (tip.equals("enum")) {
+              this.isEnum = true;
+              this.type = capitalize(this.name);
+            } else if (tip.indexOf("class#") != -1) {
+              int typeStart = tip.indexOf('#');
+              this.type = tip.substring(typeStart+1);
+            } else if (tip.equals("immut")) {
+              this.isImmut = true;
+            } else if (tip.equals("EN")) {
+              this.size = String.valueOf(Integer.parseInt(this.size) * 2);
+            } else if (tip.equals("delay")) {
+              this.isDelay = true;
+            } else if (tip.equals("uid")) {
+              this.isUid = true;
+            } else if (tip.equals("internal")) {
+              this.isInternal = true;
+            }
           }
         }
       }
-      return null;
     }
 
     public static FieldDesc buildFromResultSet(String tableSql, ResultSet rs) {
       FieldDesc field = new FieldDesc();
       try {
         field.name = rs.getString("Field");
-        String tip = detectTypeTip(tableSql, field.name);
       
         String type = rs.getString("Type");
         String def = rs.getString("Default");
 
-        if (tip != null) {
-          if (tip.equals("enum")) {
-            field.isEnum = true;
-            field.type = capitalize(field.name);
-          }
-        } else if (type.startsWith("bigint")) {
+        if (type.startsWith("bigint")) {
           field.type = "long";
         } else if (type.contains("int")) {
           field.type = "int";
-        } else if (type.contains("char") || type.contains("text")) {
+        } else if (type.contains("char")) {
+          int bracketStart = type.indexOf('(');
+          int bracketEnd   = type.indexOf(')');
+          if (bracketStart != -1 && bracketEnd != -1) {
+            int size = Integer.parseInt(type.substring(bracketStart+1, bracketEnd));
+            field.size = String.valueOf(size/2);
+          }
           field.type = "String";
+        } else if (type.contains("text")) {
+          field.type = "String";
+        } else if (type.contains("blob")) {
+          field.type = "byte[]";
         } else if (type.equals("timestamp")) {
           field.type = "LocalDateTime";
           field.timestamp = true;
@@ -85,6 +128,8 @@ public class CodeAutoGen {
           field.type = "LocalDate";
         } else if (type.startsWith("decimal")) {
           field.type = "BigDecimal";
+        } else {
+          throw new RuntimeException("unknow filed type: " + type);
         }
 
         String key = rs.getString("Key");
@@ -97,6 +142,8 @@ public class CodeAutoGen {
         } else if (key.equals("UNI") || key.equals("MUL")) {
           field.isKey = true;
         }
+
+        field.fixWithTips(tableSql, field.name);
         return field;
       } catch (Exception e) {
         throw new RuntimeException(e);
@@ -108,6 +155,7 @@ public class CodeAutoGen {
     public boolean hasDateTimeType;
     public boolean hasDateType;
     public boolean hasBigDecimalType;
+    public boolean hasBinary;
 
     public boolean hasPrimaryKey;
     public boolean isPrimaryKeyAutoIncrement;
@@ -157,6 +205,7 @@ public class CodeAutoGen {
     private void prepare() {
       hasDateTimeType = hasDateType = false;
       hasBigDecimalType = false;
+      hasBinary = false;
       hasPrimaryKey = isPrimaryKeyAutoIncrement = false;
 
       for (FieldDesc field : fields) {
@@ -164,20 +213,19 @@ public class CodeAutoGen {
           hasPrimaryKey = true;
           primaryKeyType = field.type;
           primaryKeyName = field.name;
+          isPrimaryKeyAutoIncrement = field.isAutoIncrement;
         }
         if (field.type.equals("LocalDateTime") || field.type.equals("LocalDate")) {
           hasDateTimeType = true;
           if (field.type.equals("LocalDate")) hasDateType = true;
         } else if (field.type.equals("BigDecimal")) {
           hasBigDecimalType = true;
+        } else if (field.type.equals("byte[]")) {
+          hasBinary = true;
         }
       }
     }
-
-    
-    
   }
-
 
   static String box(String type) {
     if (type.equals("long")) return "Long";
@@ -185,6 +233,11 @@ public class CodeAutoGen {
     else return type;
   }
 
+  static String box(String type, String value) {
+    if (type.equals("long")) return value + "L";
+    else return value;
+  }
+  
   String genMapperClassName(String className) {
     return className + "Mapper";
   }
@@ -233,110 +286,118 @@ public class CodeAutoGen {
     String primaryKey = entityDesc.primaryKeyName;
     
     CodeWriter cw = new CodeWriter();
-    cw.write("static final String SELECT_BY_%s = 'SELECT * FROM ' + TABLE + ' WHERE %s = #{%s}';",
-             primaryKey.toUpperCase(), primaryKey, primaryKey);
+    cw.write("static final String SELECT_BY_%s = 'SELECT * FROM ' + TABLE +", primaryKey.toUpperCase())
+      .write(2, "' WHERE %s = #{%s}';", primaryKey, primaryKey);
 
     return cw.toString(4);
   }
-  
-  String genMapperSelectFun(EntityDesc entityDesc, String entityClazz) {
-    CodeWriter cw = new CodeWriter();
-    cw.write("@SelectProvider(type = Paging.class, method = 'list')")
-      .write("List<%s> find(Paging paging);", entityClazz)
-      .newLine()
-      .write("@SelectProvider(type = Paging.class, method = 'first')")
-      .write("List<%s> first(Paging paging);", box(entityDesc.primaryKeyType))
-      .newLine()
-      .write("@SelectProvider(type = Paging.class, method = 'forward')")
-      .write("List<%s> forward(Paging paging);", box(entityDesc.primaryKeyType))
-      .newLine()
-      .write("@SelectProvider(type = Paging.class, method = 'backward')")
-      .write("List<%s> backward(Paging paging);", box(entityDesc.primaryKeyType))
-      .newLine();
 
-    if (entityDesc.hasPrimaryKey) {
-      String primaryKey = entityDesc.primaryKeyName;
-      cw.write("@Select(Sql.SELECT_BY_%s)", primaryKey.toUpperCase())
-        .write("%s findBy%s(%s %s);", entityClazz, capitalize(primaryKey),
-               entityDesc.primaryKeyType, primaryKey);
+  String genMapperSelectFun(EntitySource source, EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+      
+    CodeWriter cw = new CodeWriter();
+    
+    if (!source.nopaging) {
+      cw.write("@SelectProvider(type = Paging.class, method = 'list')")
+        .write("List<%s> find(Paging paging);", source.entityClazz)
+        .newLine()
+        .write("@SelectProvider(type = Paging.class, method = 'first')")
+        .write("List<%s> first(Paging paging);", box(entityDesc.primaryKeyType))
+        .newLine()
+        .write("@SelectProvider(type = Paging.class, method = 'forward')")
+        .write("List<%s> forward(Paging paging);", box(entityDesc.primaryKeyType))
+        .newLine()
+        .write("@SelectProvider(type = Paging.class, method = 'backward')")
+        .write("List<%s> backward(Paging paging);", box(entityDesc.primaryKeyType))
+        .newLine();
     }
+
+    cw.write("@Select(Sql.SELECT_BY_%s)", primaryKey.toUpperCase())
+      .write("%s findBy%s(%s %s);", source.entityClazz, capitalize(primaryKey),
+             entityDesc.primaryKeyType, primaryKey);
+
     return cw.toString(2);
   }
 
-  String genMapperInsertSql(EntityDesc entityDesc, String clazz) {
-    String var = uncapitalize(clazz);
+  String genMapperInsertSql(EntitySource source, EntityDesc entityDesc) {
     CodeWriter cw = new CodeWriter();
 
-    cw.write(0, "public static String insert(%s %s) {", clazz, var)
+    cw.write(0, "public static String insert(%s %s) {", source.entityClazz, source.entityVar)
       .write(2, "SQL sql = new SQL().INSERT_INTO(TABLE);")
       .newLine();
 
     for (FieldDesc field : entityDesc.fields) {
-      if (field.isAutoIncrement) continue;
-
-      String fieldClazz = capitalize(field.name);
+      if (field.isAutoIncrement || field.isDelay) continue;
       String fieldVar = field.name;
 
-      if (field.isKey) {
+      if (field.isKey || field.isUid || field.isImmut) {
         cw.write(2, "sql.VALUES('%s', '#{%s}');", fieldVar, fieldVar);
       } else if (field.timestamp) {
         if (!field.autoUpdate) cw.write(2, "sql.VALUES('%s', 'NULL');", fieldVar);
-      } else {
+      } 
+    }
+    cw.newLine();
+
+    for (FieldDesc field : entityDesc.fields) {
+      if (field.isAutoIncrement || field.isDelay) continue;
+      String fieldClazz = capitalize(field.name);
+      String fieldVar = field.name;
+
+      if (!field.isKey && !field.isUid && !field.isImmut && !field.timestamp) {
         if (field.type.equals("long")) {
-          cw.write(2, "if (%s.get%s() != Long.MIN_VALUE) {", var, fieldClazz);
+          cw.write(2, "if (%s.get%s() != Long.MIN_VALUE) {", source.entityVar, fieldClazz);
         } else if (field.type.equals("int")) {
-          cw.write(2, "if (%s.get%s() != Integer.MIN_VALUE) {", var, fieldClazz);
+          cw.write(2, "if (%s.get%s() != Integer.MIN_VALUE) {", source.entityVar, fieldClazz);
         } else {
-          cw.write(2, "if (%s.get%s() != null) {", var, fieldClazz);
+          cw.write(2, "if (%s.get%s() != null) {", source.entityVar, fieldClazz);
         }
         cw.write(4, "sql.VALUES('%s', '#{%s}');", fieldVar, fieldVar)
-          .write(2, "}");
+          .write(2, "}")
+          .newLine();
       }
-      
-      cw.newLine();
     }
+
     cw.write(2, "return sql.toString();")
       .write(0, "}");
     return cw.toString(4);
   }
 
-  String genMapperInsertFun(EntityDesc entityDesc, String clazz) {
-    String var = uncapitalize(clazz);
+  String genMapperInsertFun(EntitySource source, EntityDesc entityDesc) {
     CodeWriter cw = new CodeWriter();
 
     cw.write("@InsertProvider(type = Sql.class, method = 'insert')");
     if (entityDesc.isPrimaryKeyAutoIncrement) {
       cw.write("@Options(useGeneratedKeys=true, keyProperty = '%s')", entityDesc.primaryKeyName);
     }
-    cw.write("int add(%s %s);", clazz, var);
+    cw.write("int add(%s %s);", source.entityClazz, source.entityVar);
     return cw.toString(2);
   }
 
-  String genMapperUpdateSql(EntityDesc entityDesc, String clazz) {
+  String genMapperUpdateSql(EntitySource source, EntityDesc entityDesc) {
     if (!entityDesc.hasPrimaryKey) return null;
     String primaryKey = entityDesc.primaryKeyName;
-    
-    String var = uncapitalize(clazz);
     CodeWriter cw = new CodeWriter();
 
-    cw.write(0, "public static String update(%s %s) {", clazz, var)
+    cw.write(0, "public static String update(%s %s) {", source.entityClazz, source.entityVar)
       .write(2, "SQL sql = new SQL().UPDATE(TABLE);")
       .newLine();
       
     for (FieldDesc f : entityDesc.fields) {
-      if (f.name.equals(primaryKey) || f.timestamp) continue;
+      if (f.name.equals(primaryKey) || f.timestamp ||
+          f.isImmut || f.isUid) continue;
 
       String fieldClazz = capitalize(f.name);
       String fieldVar = f.name;
         
       if (f.type.equals("long")) {
-        cw.write(2, "if (%s.get%s() != Long.MIN_VALUE) {", var, fieldClazz);
+        cw.write(2, "if (%s.get%s() != Long.MIN_VALUE) {", source.entityVar, fieldClazz);
       } else if (f.type.equals("int")) {
-        cw.write(2, "if (%s.get%s() != Integer.MIN_VALUE) {", var, fieldClazz);
+        cw.write(2, "if (%s.get%s() != Integer.MIN_VALUE) {", source.entityVar, fieldClazz);
       } else {
-        cw.write(2, "if (%s.get%s() != null) {", var, fieldClazz);
+        cw.write(2, "if (%s.get%s() != null) {", source.entityVar, fieldClazz);
       }
-      cw.write(4, "sql.SET('%s = #{%s}');", var, fieldClazz)
+      cw.write(4, "sql.SET('%s = #{%s}');", fieldVar, fieldVar)
         .write(2, "}")
         .newLine();
     }
@@ -348,20 +409,38 @@ public class CodeAutoGen {
     return cw.toString(4);
   }
 
-  String genMapperUpdateFun(EntityDesc entityDesc, String clazz) {
-    String var = uncapitalize(clazz);
+  String genMapperUpdateFun(EntitySource source) {
     CodeWriter cw = new CodeWriter();
 
     cw.write("@UpdateProvider(type = Sql.class, method = 'update')")
-      .write("int update(%s %s);", clazz, var);
+      .write("int update(%s %s);", source.entityClazz, source.entityVar);
+
+    return cw.toString(2);
+  }
+
+  String genMapperDeleteSql(EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+    
+    CodeWriter cw = new CodeWriter();
+    cw.write("static final String DELETE_BY_%s = 'DELETE FROM ' + TABLE +", primaryKey.toUpperCase())
+      .write(2, "' WHERE %s = #{%s}';", primaryKey, primaryKey);
+
+    return cw.toString(4);
+  }
+
+  String genMapperDeleteFun(EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+
+    CodeWriter cw = new CodeWriter();
+    cw.write("@Delete(Sql.DELETE_BY_%s)", primaryKey.toUpperCase())
+      .write("int delete(%s %s);", entityDesc.primaryKeyType, primaryKey);
 
     return cw.toString(2);
   }
 
   String genMapperCode(EntitySource source, EntityDesc entityDesc) {
-    String mapperClazz = genMapperClassName(source.className);
-    String entityClazz = genEntityClassName(source.className);
-
     CodeWriter cw = new CodeWriter();
     cw.write("package %s.mapper;", source.packagePrefix)
       .newLine()
@@ -369,21 +448,25 @@ public class CodeAutoGen {
       .write("import org.apache.ibatis.annotations.*;")
       .write("import org.apache.ibatis.jdbc.SQL;");
     
-    if (entityDesc.hasPrimaryKey) cw.write("import commons.mybatis.Paging;");
+    if (entityDesc.hasPrimaryKey && !source.nopaging) {
+      cw.write("import commons.mybatis.Paging;");
+    }
     
-    cw.write("import %s.entity.%s;", source.packagePrefix, entityClazz)
+    cw.write("import %s.entity.%s;", source.packagePrefix, source.entityClazz)
       .newLine()
-      .write("public interface %s {", mapperClazz)
+      .write("public interface %s {", source.mapperClazz)
       .write(2, "class Sql {")
-      .write(4, "public static final String TABLE = '%s';", source.className)
+      .write(4, "public static final String TABLE = '%s';", source.shortTable)
       .write(0, genMapperSelectSql(entityDesc))
-      .write(0, genMapperInsertSql(entityDesc, entityClazz))
-      .write(0, genMapperUpdateSql(entityDesc, entityClazz))
+      .write(0, genMapperInsertSql(source, entityDesc))
+      .write(0, genMapperUpdateSql(source, entityDesc))
+      .write(0, genMapperDeleteSql(entityDesc))
       .write(2, "}")
       .newLine()
-      .write(0, genMapperSelectFun(entityDesc, entityClazz))
-      .write(0, genMapperInsertFun(entityDesc, entityClazz))
-      .write(0, genMapperUpdateFun(entityDesc, entityClazz))
+      .write(0, genMapperSelectFun(source, entityDesc))
+      .write(0, genMapperInsertFun(source, entityDesc))
+      .write(0, genMapperUpdateFun(source))
+      .write(0, genMapperDeleteFun(entityDesc))
       .write("}");
     return cw.toString();
   }
@@ -393,26 +476,27 @@ public class CodeAutoGen {
   }
   
   String genEntityCode(EntitySource source, EntityDesc entityDesc) {
-    String entityClazz = genEntityClassName(source.className);
-
     CodeWriter cw = new CodeWriter();
     cw.write("package %s.entity;", source.packagePrefix)
       .newLine();
 
     if (entityDesc.hasBigDecimalType) cw.write("import java.math.BigDecimal;");
     if (entityDesc.hasDateTimeType) cw.write("import java.time.*;");
+    cw.write("import javax.validation.constraints.*;");
     if (entityDesc.hasDateType) {
       cw.write("import org.springframework.format.annotation.DateTimeFormat;");
     }
     cw.write("import org.jsondoc.core.annotation.*;")
       .newLine();
 
-    cw.write("@ApiObject(name = '%s', description = '%s')", entityClazz, entityClazz);
-    cw.write("public class %s {", entityClazz);
+    cw.write("@ApiObject(name = '%s', description = '%s')", source.entityClazz, source.entityClazz);
+    cw.write("public class %s {", source.entityClazz);
 
     for (FieldDesc field : entityDesc.fields) {
       if (!field.isEnum) continue;
-      cw.write(2, "public static enum %s {", field.type)
+      cw.write(2, "@ApiObject(name = '%s.%s', description = '%s %s')",
+               source.entityClazz, field.type, source.entityClazz, field.type)
+        .write(2, "public static enum %s {", field.type)
         .write(4, "PH(1);")
         .newLine()
         .write(4, "private int value;")
@@ -431,6 +515,8 @@ public class CodeAutoGen {
       } else {
         if (field.type.equals("LocalDate")) {
           cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)");
+        } else if (field.type.equals("String") && field.size != null) {
+          cw.write(2, "@Size(max = %s)", field.size);
         }
         cw.write(2, "%s %s;", field.type, field.name);
       }
@@ -455,107 +541,92 @@ public class CodeAutoGen {
     return className + "Controller";
   }
 
+  void genControllerPaging(CodeWriter cw, EntitySource source, EntityDesc entityDesc) {
+    if (source.nopaging) return;
+
+    String primaryKey = entityDesc.primaryKeyName;
+    
+    cw.write("@ApiMethod(description = 'FunName: get %s pages')", source.entityClazz)
+      .write("@RequestMapping(value = '/%s/pages', method = RequestMethod.GET)", source.entityVar)
+      .write("public ApiResult %sPages(", source.entityVar)
+      .write(2, "@ApiQueryParam(name = '%s', description = 'if backward, the current smallest %s orElse the bigest, default -1, the first pages')",
+             primaryKey, primaryKey)
+      .write(2, "@RequestParam Optional<%s> %s,", box(entityDesc.primaryKeyType), primaryKey)
+      .write(2, "@ApiQueryParam(name = 'backward', description = 'default yes')")
+      .write(2, "@RequestParam Optional<Boolean> backward) {")
+      .write(2, "return %s.pages(%s.orElse(%s), backward.orElse(true), pages, count);",
+             source.managerVar, primaryKey, box(entityDesc.primaryKeyType, "-1"))
+      .write("}")
+      .newLine();
+
+    cw.write("@ApiMethod(description = 'FunName: browse %ss')", source.entityClazz)
+      .write("@RequestMapping(value = '/%s/list', method = RequestMethod.GET)", source.entityVar)
+      .write("public ApiResult list%s(", source.entityClazz)
+      .write(2, "@ApiQueryParam(name = '%s', description = 'if first screen, ignore')", primaryKey)
+      .write(2, "@RequestParam Optional<%s> %s) {", box(entityDesc.primaryKeyType), primaryKey)
+      .write(2, "return %s.list(%s, count);", source.managerVar, primaryKey)
+      .write("}")
+      .newLine();
+  }
+
   String genControllerSelectFun(EntitySource source, EntityDesc entityDesc) {
     if (!entityDesc.hasPrimaryKey) return null;
     String primaryKey = entityDesc.primaryKeyName;
-    
-    String managerVar = uncapitalize(genManagerClassName(source.className));
-    String entityClazz = source.className;
-    String entityVar = uncapitalize(source.className);
     CodeWriter cw = new CodeWriter();
-
-    cw.write("@ApiMethod(description = 'get first %s pages')", entityClazz)
-      .write("@RequestMapping(value = '/%s/pages', method = RequestMethod.GET)", entityVar)
-      .write("public ApiResult pages() {")
-      .write(2, "return %s.pages(-1, true, pages, count);", managerVar)
-      .write("}")
-      .newLine();
-
-    cw.write("@ApiMethod(description = 'get %s pages backward')", entityClazz)
-      .write("@RequestMapping(value = '/%s/pages/backward', method = RequestMethod.GET)", entityVar)
-      .write("public ApiResult backwardPages(")
-      .write(2, "@ApiQueryParam(name = '%s', description = 'the current smallest %s')",
-             primaryKey, primaryKey)
-      .write(2, "@RequestParam %s %s) {", entityDesc.primaryKeyType, primaryKey)
-      .write(2, "return %s.pages(%s, true, pages, count);", managerVar, primaryKey)
-      .write("}")
-      .newLine();
-   
-    cw.write("@ApiMethod(description = 'get %s pages forward')", entityClazz)
-      .write("@RequestMapping(value = '/%s/pages/forward', method = RequestMethod.GET)", entityVar)
-      .write("public ApiResult forwardPages(")
-      .write(2, "@ApiQueryParam(name = '%s', description = 'the current bigest %s')",
-             primaryKey, primaryKey)
-      .write(2, "@RequestParam %s %s) {", entityDesc.primaryKeyType, primaryKey)
-      .write(2, "return %s.pages(%s, true, pages, count);", managerVar, primaryKey)
-      .write("}")
-      .newLine();
-
-    cw.write("@ApiMethod(description = 'browse %ss')", entityClazz)
-      .write("@RequestMapping(value = '/%s/list', method = RequestMethod.GET)", entityVar)
-      .write("public ApiResult list%s(", entityClazz)
-      .write(2, "@ApiQueryParam(name = '%s', description = 'if first screen, ignore')", primaryKey)
-      .write(2, "@RequestParam Optional<%s> %s) {", box(entityDesc.primaryKeyType), primaryKey)
-      .write(2, "return %s.list(%s, count);", managerVar, primaryKey)
-      .write("}")
-      .newLine();
     
-    cw.write("@ApiMethod(description = 'FunName: find %s by %s')", entityClazz, primaryKey)
+    genControllerPaging(cw, source, entityDesc);
+    
+    cw.write("@ApiMethod(description = 'FunName: find %s by %s')", source.entityClazz, primaryKey)
       .write("@RequestMapping(value = '/%s/{%s}', method = RequestMethod.GET)",
-             entityVar, primaryKey)
+             source.entityVar, primaryKey)
       .write("public ApiResult findBy%s(", capitalize(primaryKey))
       .write(2, "@ApiPathParam(name = '%s', description = '%s')", primaryKey, primaryKey)
       .write(2, "@PathVariable %s %s) {", entityDesc.primaryKeyType, primaryKey)
-      .write(2, "return %s.findBy%s(%s);", managerVar, capitalize(primaryKey), primaryKey)
+      .write(2, "return %s.findBy%s(%s);", source.managerVar, capitalize(primaryKey), primaryKey)
       .write("}");
     
     return cw.toString(2);
   }
 
-  String genControllerInsertFun(EntitySource source, EntityDesc entityDesc) {
-    String entityClazz = genEntityClassName(source.className);
-    String entityVar = uncapitalize(entityClazz);
-    String managerVar = uncapitalize(genManagerClassName(source.className));
+
+  String genControllerInsertFun(EntitySource source) {
     CodeWriter cw = new CodeWriter();
 
     cw.write("@ApiMethod(description = 'FunName: add %s')", source.className)
-      .write("@RequestMapping(value = '/%s', method = RequestMethod.POST)",
-             uncapitalize(source.className))
+      .write("@RequestMapping(value = '/%s', method = RequestMethod.POST)", source.entityVar)
       .write("public ApiResult add(");
     if (source.security) {
       cw.write(2, "@AuthenticationPrincipal RedisRememberMeService.User user,");
     }
-    cw.write(2, "@ApiBodyObject @Valid %s %s,", entityClazz, entityVar)
+    cw.write(2, "@ApiBodyObject @Valid %s %s,", source.entityClazz, source.entityVar)
       .write(2, "BindingResult bindingResult) {")
       .write(2, "if (bindingResult.hasErrors()) {")
       .write(4, "return ApiResult.bindingResult(bindingResult);")
       .write(2, "}")
       .newLine()
-      .write(2, "return %s.add(%s);", managerVar, entityVar)
+      .write(2, "// TODO: setUid()")
+      .write(2, "return %s.add(%s);", source.managerVar, source.entityVar)
       .write("}");
 
     return cw.toString(2);
   }
 
   String genControllerUpdateFun(EntitySource source, EntityDesc entityDesc) {
-    if (!entityDesc.hasPrimaryKey) return "";
+    if (!entityDesc.hasPrimaryKey) return null;
     String primaryKey = entityDesc.primaryKeyName;
-    
-    String entityClazz = genEntityClassName(source.className);
-    String entityVar = uncapitalize(entityClazz);
-    String managerVar = uncapitalize(genManagerClassName(source.className));
     CodeWriter cw = new CodeWriter();
 
     cw.write("@ApiMethod(description = 'FunName: update')");
     cw.write("@RequestMapping(value = '/%s/{%s}', method = RequestMethod.PUT)",
-             uncapitalize(source.className), primaryKey);
+             source.entityVar, primaryKey);
     cw.write("public ApiResult update(");
     if (source.security) {
       cw.write(2, "@AuthenticationPrincipal RedisRememberMeService.User user,");
     }
 
     for (FieldDesc f : entityDesc.fields) {
-      if (f.name.equals(primaryKey) || (f.timestamp && f.autoUpdate)) continue;
+      if (f.name.equals(primaryKey) || (f.timestamp && f.autoUpdate) ||
+          f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
 
       cw.write(2, "@ApiQueryParam(name = '%s', description = '%s', required = false)",
                f.name, f.name);
@@ -563,8 +634,10 @@ public class CodeAutoGen {
       if (f.type.equals("LocalDate")) {
         cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)")
           .write(2, "@RequestParam Optional<LocalDate> %s,", f.name);
+      } else if (f.type.equals("byte[]")) {
+        cw.write(2, "@RequestParam MultipartFile %s,", f.name);
       } else if (f.isEnum) {
-        cw.write(2, "@RequestParam Optional<%s.%s> %s,", entityClazz, f.type, f.name);
+        cw.write(2, "@RequestParam Optional<%s.%s> %s,", source.entityClazz, f.type, f.name);
       } else {
         cw.write(2, "@RequestParam Optional<%s> %s,", box(f.type), f.name);
       }
@@ -572,32 +645,54 @@ public class CodeAutoGen {
     }
 
     cw.write(2, "@ApiPathParam(name = '%s', description = '%s')", primaryKey, primaryKey)
-      .write(2, "@PathVariable %s %s) {", entityDesc.primaryKeyType, primaryKey)
+      .write(2, "@PathVariable %s %s) %s{", entityDesc.primaryKeyType, primaryKey,
+             entityDesc.hasBinary ? "throws Exception " : "")
       .newLine()
-      .write(2, "%s %s = new %s();", entityClazz, entityVar, entityClazz);
+      .write(2, "%s %s = new %s();", source.entityClazz, source.entityVar, source.entityClazz);
                
     for (FieldDesc f : entityDesc.fields) {
-      if (f.timestamp && f.autoUpdate) continue;
+      if ((f.timestamp && f.autoUpdate) ||
+          f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
       
       if (f.name.equals(primaryKey)) {
-        cw.write(2, "%s.set%s(%s);", entityVar, capitalize(f.name), f.name);
+        cw.write(2, "%s.set%s(%s);", source.entityVar, capitalize(f.name), f.name);
+      } else if (f.type.equals("byte[]")) {
+        cw.write(2, "%s.set%s(%s.getBytes());", source.entityVar, capitalize(f.name), f.name);
       } else if (f.type.equals("long") || f.type.equals("int")) {
         cw.write(2, "if (%s.isPresent()) %s.set%s(%s.get());",
-                 f.name, entityVar, capitalize(f.name), f.name);
+                 f.name, source.entityVar, capitalize(f.name), f.name);
       } else {
-        cw.write(2, "%s.set%s(%s.orElse(null));", entityVar, capitalize(f.name), f.name);
+        cw.write(2, "%s.set%s(%s.orElse(null));", source.entityVar, capitalize(f.name), f.name);
       }
     }
     cw.newLine()
-      .write(2, "return %s.update(%s);", managerVar, entityVar)
+      .write(2, "return %s.update(%s);", source.managerVar, source.entityVar)
       .write("}");
 
     return cw.toString(2);
   }
-  
+
+  String genControllerDeleteFun(EntitySource source, EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+    CodeWriter cw = new CodeWriter();
+    
+    cw.write("@ApiMethod(description = 'FunName: delete %s by %s')", source.entityClazz, primaryKey)
+      .write("@RequestMapping(value = '/%s/{%s}', method = RequestMethod.DELETE)",
+             source.entityVar, primaryKey)
+      .write("public ApiResult delete(");
+    if (source.security) {
+      cw.write(2, "@AuthenticationPrincipal RedisRememberMeService.User user,");
+    }    
+    cw.write(2, "@ApiPathParam(name = '%s', description = '%s')", primaryKey, primaryKey)
+      .write(2, "@PathVariable %s %s) {", entityDesc.primaryKeyType, primaryKey)
+      .write(2, "return %s.delete(%s);", source.managerVar, primaryKey)
+      .write("}");
+    
+    return cw.toString(2);
+  }
+    
   String genControllerCode(EntitySource source, EntityDesc entityDesc) {
-    String controllerClazz = genControllerClassName(source.className);
-    String managerClazz = genManagerClassName(source.className);
     CodeWriter cw = new CodeWriter();
 
     cw.write("package %s.api;", source.packagePrefix)
@@ -618,6 +713,9 @@ public class CodeAutoGen {
       cw.write("import org.springframework.core.env.Environment;");
     }
     cw.write("import org.springframework.http.*;");
+    if (entityDesc.hasBinary) {
+      cw.write("import org.springframework.web.multipart.MultipartFile;");
+    }
     if (source.security) {
       cw.write("import org.springframework.security.core.annotation.AuthenticationPrincipal;");
       cw.write("import commons.spring.RedisRememberMeService;");
@@ -630,8 +728,8 @@ public class CodeAutoGen {
     cw.write("@Api(name = '%s API', description = '%s')", source.className, source.className)
       .write("@RestController")
       .write("@RequestMapping('/api')")
-      .write("public class %s {", controllerClazz)
-      .write(2, "@Autowired %s %s;", managerClazz, uncapitalize(managerClazz))
+      .write("public class %s {", source.controllerClazz)
+      .write(2, "@Autowired %s %s;", source.managerClazz, source.managerVar)
       .newLine();
     
     if (entityDesc.hasPrimaryKey) {
@@ -639,7 +737,7 @@ public class CodeAutoGen {
         .write(2, "private int count;")
         .newLine()
         .write(2, "@Autowired")
-        .write(2, "public %s(Environment env) {", controllerClazz)
+        .write(2, "public %s(Environment env) {", source.controllerClazz)
         .write(4, "this.pages = Integer.parseInt(env.getProperty('list.pages', '10'));")
         .write(4, "this.count = Integer.parseInt(env.getProperty('list.count', '20'));")
         .write(2, "}")
@@ -647,8 +745,9 @@ public class CodeAutoGen {
     }
 
     cw.write(genControllerSelectFun(source, entityDesc))
-      .write(genControllerInsertFun(source, entityDesc))
+      .write(genControllerInsertFun(source))
       .write(genControllerUpdateFun(source, entityDesc))
+      .write(genControllerDeleteFun(source, entityDesc))
       .write("}");
     
     return cw.toString();
@@ -658,87 +757,102 @@ public class CodeAutoGen {
     return className + "Manager";
   }
 
-  String genManagerSelectFun(EntitySource source, EntityDesc entityDesc) {
-    if (!entityDesc.hasPrimaryKey) return null;
+  void genManagerPaging(CodeWriter cw, EntitySource source, EntityDesc entityDesc) {
+    if (source.nopaging) return;
     String primaryKey = entityDesc.primaryKeyName;
 
-    String entityClazz = genEntityClassName(source.className);
-    String entityVar = uncapitalize(entityClazz);
-    String mapperClazz = genMapperClassName(source.className);
-    String mapperVar = uncapitalize(mapperClazz);
-    CodeWriter cw = new CodeWriter();
-
+    cw.write("Paging initPaging(int pages, int count) {")
+      .write(2, "Paging paging = new Paging().setTable(%s.Sql.TABLE);", source.mapperClazz)
+      .write(2, "paging.setRowId('%s').setCount(pages, count);", primaryKey)
+      .write(2, "return paging;")
+      .write("}")
+      .newLine();
+    
     cw.write("public ApiResult pages(%s %s, boolean backward, int pages, int count) {",
              entityDesc.primaryKeyType, primaryKey)
-      .write(2, "Paging paging = new Paging().setTable(%s.Sql.TABLE);", mapperClazz)
-      .write(2, "paging.setRowId('%s').setCount(pages, count);", primaryKey)
+      .write(2, "Paging paging = initPaging(pages, count);")
       .newLine()
-      .write(2, "List<%s> %ss;", box(entityDesc.primaryKeyType), entityVar)
+      .write(2, "List<%s> %ss;", box(entityDesc.primaryKeyType), source.entityVar)
       .write(2, "if (%s == -1) {", primaryKey)
-      .write(4, "%ss = %s.first(paging);", entityVar, mapperVar)
+      .write(4, "%ss = %s.first(paging);", source.entityVar, source.mapperVar)
       .write(2, "} else {")
       .write(4, "paging.setParams('%s', %s);", primaryKey, primaryKey)
       .write(4, "%ss = backward ? %s.backward(paging) : %s.forward(paging);",
-             entityVar, mapperVar, mapperVar)
+             source.entityVar, source.mapperVar, source.mapperVar)
       .write(2, "}")
-      .write(2, "return new ApiResult<List>(paging.pages(%ss, count));", entityVar)
+      .write(2, "return new ApiResult<List>(paging.pages(%ss, count));", source.entityVar)
       .write("}")
       .newLine();
     
     cw.write("public ApiResult list(Optional<%s> %s, int count) {",
              box(entityDesc.primaryKeyType), primaryKey)
-      .write(2, "Paging paging = new Paging().setTable(%s.Sql.TABLE);", mapperClazz)
-      .write(2, "paging.setRowId('%s').setCount(1, count);", primaryKey)
+      .write(2, "Paging paging = initPaging(1, count);")
       .newLine()
-      .write(2, "List<%s> %ss;", entityClazz, entityVar)
+      .write(2, "List<%s> %ss;", source.entityClazz, source.entityVar)
       .write(2, "if (%s.isPresent()) paging.setParams('%s', %s.get());",
              primaryKey, primaryKey, primaryKey)
-      .write(2, "%ss = %s.find(paging);", entityVar, mapperVar)
-      .write(2, "return new ApiResult<List>(%ss);", entityVar)
+      .write(2, "%ss = %s.find(paging);", source.entityVar, source.mapperVar)
+      .write(2, "return new ApiResult<List>(%ss);", source.entityVar)
       .write("}")
       .newLine();
+  }
+
+  String genManagerSelectFun(EntitySource source, EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+    CodeWriter cw = new CodeWriter();
+
+    genManagerPaging(cw, source, entityDesc);
 
     cw.write("public ApiResult findBy%s(%s %s) {",
              capitalize(primaryKey), entityDesc.primaryKeyType, primaryKey)
-      .write(2, "%s %s = %s.findBy%s(%s);", entityClazz, entityVar, mapperVar,
+      .write(2, "%s %s = %s.findBy%s(%s);", source.entityClazz, source.entityVar, source.mapperVar,
              capitalize(primaryKey), primaryKey)
-      .write(2, "return new ApiResult<%s>(%s);", entityClazz, entityVar)
+      .write(2, "return new ApiResult<%s>(%s);", source.entityClazz, source.entityVar)
       .write("}");
 
     return cw.toString(2);
   }
 
-  String genManagerInsertFun(EntitySource source, EntityDesc entityDesc) {
-    String entityClazz = genEntityClassName(source.className);
-    String entityVar = uncapitalize(entityClazz);
-    String mapperVar = uncapitalize(genMapperClassName(source.className));
+  String genManagerInsertFun(EntitySource source) {
     CodeWriter cw = new CodeWriter();
 
-    cw.write("public ApiResult add(%s %s) {", entityClazz, entityVar)
-      .write(2, "%s.add(%s);", mapperVar, entityVar)
-      .write(2, "return new ApiResult<%s>(%s);", entityClazz, entityVar)
+    if (!source.nontrans) cw.write("@Transactional");
+    cw.write("public ApiResult add(%s %s) {", source.entityClazz, source.entityVar)
+      .write(2, "%s.add(%s);", source.mapperVar, source.entityVar)
+      .write(2, "return new ApiResult<%s>(%s);", source.entityClazz, source.entityVar)
       .write("}");
       
     return cw.toString(2);
   }
 
-  String genManagerUpdateFun(EntitySource source, EntityDesc entityDesc) {
-    String entityClazz = genEntityClassName(source.className);
-    String entityVar = uncapitalize(entityClazz);
-    String mapperVar = uncapitalize(genMapperClassName(source.className));
+  String genManagerUpdateFun(EntitySource source) {
     CodeWriter cw = new CodeWriter();
 
-    cw.write("public ApiResult update(%s %s) {", entityClazz, entityVar)
-      .write(2, "%s.update(%s);", mapperVar, entityVar)
+    if (!source.nontrans) cw.write("@Transactional");
+    cw.write("public ApiResult update(%s %s) {", source.entityClazz, source.entityVar)
+      .write(2, "%s.update(%s);", source.mapperVar, source.entityVar)
       .write(2, "return ApiResult.ok();")
       .write("}");
 
     return cw.toString(2); 
   }
+
+  String genManagerDeleteFun(EntitySource source, EntityDesc entityDesc) {
+    if (!entityDesc.hasPrimaryKey) return null;
+    String primaryKey = entityDesc.primaryKeyName;
+    CodeWriter cw = new CodeWriter();
+
+    if (!source.nontrans) cw.write("@Transactional");
+    cw.write("public ApiResult delete(%s %s) {", entityDesc.primaryKeyType, primaryKey)
+      .write(2, "%s.delete(%s);", source.mapperVar, primaryKey)
+      .write(2, "return ApiResult.ok();")
+      .write("}");
+
+    return cw.toString(2); 
+  }  
       
   String genManagerCode(EntitySource source, EntityDesc entityDesc) {
-    String mapperClazz = genMapperClassName(source.className);
-    String mapperVar = uncapitalize(mapperClazz);
     CodeWriter cw = new CodeWriter();
 
     cw.write("package %s.manager;", source.packagePrefix)
@@ -746,8 +860,11 @@ public class CodeAutoGen {
       .write("import java.util.*;")
       .write("import org.springframework.beans.factory.annotation.Autowired;")
       .write("import org.springframework.stereotype.Component;");
+    if (!source.nontrans) cw.write("import org.springframework.transaction.annotation.*;");
     
-    if (entityDesc.hasPrimaryKey) cw.write("import commons.mybatis.Paging;");
+    if (entityDesc.hasPrimaryKey && !source.nopaging) {
+      cw.write("import commons.mybatis.Paging;");
+    }
     
     cw.write("import %s.model.*;", source.packagePrefix)
       .write("import %s.mapper.*;", source.packagePrefix)
@@ -755,17 +872,18 @@ public class CodeAutoGen {
       .newLine();
 
     cw.write("@Component");
-    cw.write("public class %s {", genManagerClassName(source.className))
-      .write(2, "@Autowired %s %s;", mapperClazz, mapperVar)
+    cw.write("public class %s {", source.managerClazz)
+      .write(2, "@Autowired %s %s;", source.mapperClazz, source.mapperVar)
       .newLine()
       .write(genManagerSelectFun(source, entityDesc))
-      .write(genManagerInsertFun(source, entityDesc))
-      .write(genManagerUpdateFun(source, entityDesc))
+      .write(genManagerInsertFun(source))
+      .write(genManagerUpdateFun(source))
+      .write(genManagerDeleteFun(source, entityDesc))
       .write("}");
     
     return cw.toString();
-  }  
-  
+  }
+
   @ApiMethod(description = "Get Mapper/Entity/Controller/Manager code")  
   @RequestMapping(value = {"/", "/{typeOpt}"}, method = RequestMethod.GET,
                   produces = "text/plain"
@@ -787,23 +905,50 @@ public class CodeAutoGen {
     @ApiQueryParam(name = "table", description = "table name")
     @RequestParam String table,
     
-    @ApiQueryParam(name = "className", description = "class name tips", required = false)
+    @ApiQueryParam(name = "className", description = "class name tips")
     @RequestParam Optional<String> className,
 
-    @ApiQueryParam(name = "packagePrefix", description = "package name prefix", required = false)
+    @ApiQueryParam(name = "packagePrefix", description = "package name prefix")
     @RequestParam Optional<String> packagePrefix,
 
-    @ApiQueryParam(name = "security", description = "security flag, default yes", required = false)
-    @RequestParam Optional<Boolean> security) {
+    @ApiQueryParam(name = "security", description = "security flag, default yes")
+    @RequestParam Optional<Boolean> security,
+    
+    @ApiQueryParam(name = "nontrans", description = "without transaction, default no")
+    @RequestParam Optional<Boolean> nontrans,
+    
+    @ApiQueryParam(name = "nopaging", description = "without paging, default no")
+    @RequestParam Optional<Boolean> nopaging,
+    @ApiQueryParam(name = "nopublic", description = "without controller/manager, default no")
+    @RequestParam Optional<Boolean> nopublic) {
+
+    String parts[] = table.split("\\.");
+    if (parts.length != 2) {
+      System.out.println(parts.length);
+      throw new RuntimeException("table must prefixed with dbname");
+    }
+    String shortTable = parts[1];
 
     EntitySource source = new EntitySource();
     source.dbHostPort    = dbHostPort;
     source.dbUser        = dbUser;
     source.dbPassword    = dbPassword;
     source.table         = table;
-    source.className     = className.orElse(table);
+    source.shortTable    = shortTable;
+    source.className     = capitalize(className.orElse(shortTable));
     source.packagePrefix = packagePrefix.orElse("example");
     source.security      = security.orElse(true);
+    source.nontrans      = nontrans.orElse(false);
+    source.nopaging      = nopaging.orElse(false);
+    source.nopublic      = nopublic.orElse(false);
+
+    source.entityClazz     = genEntityClassName(source.className);
+    source.entityVar       = uncapitalize(source.entityClazz);
+    source.mapperClazz     = genMapperClassName(source.className);
+    source.mapperVar       = uncapitalize(source.mapperClazz);
+    source.managerClazz    = genManagerClassName(source.className);
+    source.managerVar      = uncapitalize(source.managerClazz);
+    source.controllerClazz = genControllerClassName(source.className);
 
     String type = typeOpt.orElse("");
     if (type.equals("mapper")) {
@@ -814,6 +959,8 @@ public class CodeAutoGen {
       return genControllerCode(source, EntityDesc.buildFromTable(source));
     } else if (type.equals("manager")) {
       return genManagerCode(source, EntityDesc.buildFromTable(source));
+    } else if (type.equals("meta")) {
+      return genMeta(EntityDesc.buildFromTable(source));
     } else {
       return genCode(source);
     }
@@ -832,6 +979,8 @@ public class CodeAutoGen {
     builder.append(genEntityCode(source, desc));
     builder.append("== END ").append(genEntityClassName(source.className)).append(" ==\n");
 
+    if (source.nopublic) return builder.toString();
+
     builder.append("== BEGIN ").append(genControllerClassName(source.className)).append(" ==\n");
     builder.append(genControllerCode(source, desc));
     builder.append("== END ").append(genControllerClassName(source.className)).append(" ==\n");
@@ -843,24 +992,57 @@ public class CodeAutoGen {
     return builder.toString();
   }
 
+  private String boolToString(boolean b) {
+    return b ? "TRUE\n" : "FALSE\n";
+  }
+
+  public String genMeta(EntityDesc entityDesc) {
+    StringBuilder builder = new StringBuilder();
+    for (FieldDesc f : entityDesc.fields) {
+      builder.append("FieldDesc\n");
+      builder.append("  name:       ").append(f.name).append("\n");
+      builder.append("  type:       ").append(f.type).append("\n");
+      builder.append("  size:       ").append(f.size).append("\n");
+      builder.append("  isEnum:     ").append(boolToString(f.isEnum));
+      builder.append("  isImmut:    ").append(boolToString(f.isImmut));
+      builder.append("  isUid:      ").append(boolToString(f.isUid));
+      builder.append("  isDelay:    ").append(boolToString(f.isDelay));
+      builder.append("  isInternal: ").append(boolToString(f.isInternal));
+      builder.append("--\n");
+    }
+    return builder.toString();
+  }
+
   @ApiMethod(description = "AutoCode Help")  
   @RequestMapping(value = "/help", method = RequestMethod.GET, produces = "text/plain")
   public String help() {
     StringBuilder builder = new StringBuilder();
     builder.append("Example Table: autoCode\n");
     builder.append("  CREATE TABLE autoCode (\n");
-    builder.append("    codeId   INT AUTO_INCREMENT PRIMARY KEY,\n");
-    builder.append("    language TINYINT COMMENT 'enum',\n");
-    builder.append("    author   VARCHAR(32) NOT NULL,\n");
-    builder.append("    linage   INT,\n");
-    builder.append("    content  TEXT,\n");
-    builder.append("    createAt TIMESTAMP NOT NULL DEFAULT 0,\n");
-    builder.append("    updateAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n");
-    builder.append("    expireAt DATE,\n");
+    builder.append("    codeId    INT AUTO_INCREMENT PRIMARY KEY,\n");
+    builder.append("    projectId INT COMMENT 'immut',\n");
+    builder.append("    language  TINYINT COMMENT 'enum',\n");
+    builder.append("    compiler  TINYINT COMMENT 'class#Compiler,internal',\n");
+    builder.append("    authorId  INT COMMENT 'uid',\n");
+    builder.append("    author    VARCHAR(32) NOT NULL,\n");
+    builder.append("    email     VARCHAR(32) COMMENT 'EN',\n");
+    builder.append("    reviewer  VARCHAR(32) COMMENT 'EN,delay',\n");
+    builder.append("    linage    INT,\n");
+    builder.append("    content   TEXT,\n");
+    builder.append("    createAt  TIMESTAMP NOT NULL DEFAULT 0 COMMENT 'immut',\n");
+    builder.append("    updateAt  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n");
+    builder.append("    expireAt  DATE,\n");
     builder.append("    INDEX(author)\n");
     builder.append("  );\n\n");
 
-    builder.append("If TINYINT with comment 'enum', it will be treat as enum type\n");
+    builder.append("If TINYINT with comment 'enum', it will be treat as enum type, and define a ENUM\n");
+    builder.append("If TINYINT with comment 'class#Type', it will be treat as class type, and the type is Type\n");
+    builder.append("If VARCHAR(N)/CHAR(N) with comment 'EN', it @Max will be N, or N/2\n");
+    builder.append("If with comment 'immut', it will only not be updated.\n");
+    builder.append("If with comment 'uid', it will be set from User, 'uid' will always be 'immut'\n");
+    builder.append("If with comment 'delay', it will be updated after insert.\n");
+    builder.append("If with comment 'internal', it will not be update from outside.\n");
+    builder.append("comment can be combined with comma(,), example 'EN,delay'\n");
     builder.append("\n");
 
     builder.append("API options\n");
@@ -870,7 +1052,10 @@ public class CodeAutoGen {
     builder.append("  table         optional format(db.table)\n");
     builder.append("  className     optional default use table's name\n");
     builder.append("  packagePrefix optional format(com.example) default example\n");
-    builder.append("  security      optional format(yes|no) default yes\n");
+    builder.append("  security      optional format(yes|no) default yes. if yes, add @AuthenticationPrincipal\n");
+    builder.append("  nontrans      optional format(yes|no) default no. if yes, without @@Transactional\n");
+    builder.append("  nopaging      optional format(yes|no) default no. if yes, without Paging\n");
+    builder.append("  nopublic      optional format(yes|no) default no. if yes, without controller and manager\n");
 
     return builder.toString();
   }
@@ -878,6 +1063,7 @@ public class CodeAutoGen {
   @ExceptionHandler(RuntimeException.class)
   @ResponseStatus
   public String internalServerError(Exception e) {
+    e.printStackTrace();
     return e.toString();
   }
 }
