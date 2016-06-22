@@ -2,7 +2,7 @@
 ;; ln -s PATH/.emacs.d ~/.emacs.d
 ;; mkdir ~/.emcas/site-lisp
 
- (setq debug-on-error t)
+;; (setq debug-on-error t)
 
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
