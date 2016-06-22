@@ -279,7 +279,7 @@ public class RedisRememberMeService implements RememberMeServices {
     CacheEntity cacheEntity;
     
     try (Jedis c = jedisPool.getResource()) {
-      String key = cacheKey(user.getUid());
+      String key = cacheKey(user.getId());
       cacheEntity = CacheEntity.buildFromString(c.get(key));
       if (cacheEntity == null) return false;
       
