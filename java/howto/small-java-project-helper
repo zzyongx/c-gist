@@ -100,7 +100,11 @@ sub init_project {
 
   # copy commons
   `cp -ar $gist/src/main/java/commons src/main/java`;
+  `rm -f  src/main/java/commons/spring/AnalogueJsonObjectFormatter.java`;
+  `rm -f  src/main/java/commons/spring/ListObjectHttpMessageConverter.java`;
+
   put_file_contents(".gitignore", "target\n");
+  `rm -rf .c-gist`;
 }
 
 sub coding_for_me {

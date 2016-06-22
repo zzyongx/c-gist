@@ -123,7 +123,7 @@ public class LoggerFilter implements Filter {
     String respBody = null;
     
     if (log) {
-      if (logHttpPost || logHttpPut) {
+      if (method.equals("POST") || method.equals("PUT")) {
         byte[] bytes = StreamUtils.copyToByteArray(request.getInputStream());
         reqWrap = new ResettableStreamHttpServletRequest(req, bytes);
         reqBody = new String(bytes);
@@ -148,7 +148,7 @@ public class LoggerFilter implements Filter {
     if (log || logError && respBody != null) {
       String queryStr = req.getQueryString();
       if (queryStr == null) queryStr = "-";
-      
+
       if (respBody == null) respBody = "-";
       logger.warn("{} {} {} {} {}", method, req.getRequestURI(), queryStr, reqBody, respBody);
     }
