@@ -22,7 +22,10 @@ public class WebInitializer extends AbstractAnnotationConfigDispatcherServletIni
 
   @Override
   protected Filter[] getServletFilters() {
-    return new Filter[]{new DelegatingFilterProxy("loggerFilter")};
+    return new Filter[] {
+      new DelegatingFilterProxy("loggerFilter"),
+      new DelegatingFilterProxy("xssFilter"),
+    };
   }
 
   @Override

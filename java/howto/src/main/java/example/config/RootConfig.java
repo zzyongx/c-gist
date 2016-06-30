@@ -10,8 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.jmx.export.annotation.AnnotationMBeanExporter;
 import org.springframework.jmx.support.MBeanServerFactoryBean;
 import redis.clients.jedis.JedisPool;
-import commons.spring.LoggerFilter;
-import commons.spring.RedisRememberMeService;
+import commons.spring.*;
 import commons.saas.RestNameService;
 
 @Configuration
@@ -38,6 +37,11 @@ public class RootConfig {
   @Bean
   public LoggerFilter loggerFilter() {
     return new LoggerFilter(env);
+  }
+
+  @Bean
+  public XssFilter xssFilter() {
+    return new XssFilter(env);
   }
 
   @Bean

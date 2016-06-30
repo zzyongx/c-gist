@@ -17,7 +17,7 @@ import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
 class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
-  static final String s403 = "{`code`: 403, `message`: `Access Denied`}".replace('`', '"');
+  static final String s401 = "{`code`: 401, `message`: `Unauthorized`}".replace('`', '"');
   
   @Override
   public void commence(
@@ -25,7 +25,7 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     AuthenticationException authException) throws IOException {
 
     response.setContentType("application/json");
-    response.getOutputStream().print(s403);
+    response.getOutputStream().print(s401);
   }
 }
 
@@ -106,8 +106,10 @@ public class SecurityConfigWithRedisRememberMeService extends WebSecurityConfigu
     http.exceptionHandling()
       .authenticationEntryPoint(new RestAuthenticationEntryPoint());
 
-    if (!configUrlPermit(http, true) && !configUrlPermit(http, false)) {
-      configSitePermit(http);
+    if (!configUrlPermit(http, true)) {
+      if (!configUrlPermit(http, false)) {
+        configSitePermit(http);
+      }
     }
 
     http.rememberMe().rememberMeServices(rms);
