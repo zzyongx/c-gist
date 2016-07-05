@@ -1,5 +1,6 @@
 package example.config;
 
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -70,7 +71,12 @@ public class RootConfig {
       new HttpComponentsClientHttpRequestFactory();
     factory.setConnectTimeout(Integer.parseInt(env.getProperty("rest.timeout.connect", "1000")));
     factory.setReadTimeout(Integer.parseInt(env.getProperty("rest.timeout.read", "10000")));
-    return new RestTemplate(factory);
+
+    RestTemplate rest = new RestTemplate(factory);
+    rest.setInterceptors(Arrays.asList(new RestTemplateFilter()));
+    rest.getMessageConverters().add(new LooseGsonHttpMessageConverter());
+
+    return rest;    
   }
   
   // TAG:RememberMeService

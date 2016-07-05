@@ -152,6 +152,7 @@ public class CodeAutoGen {
   }
 
   public static class EntityDesc {
+    public boolean hasStringType;
     public boolean hasDateTimeType;
     public boolean hasDateType;
     public boolean hasBigDecimalType;
@@ -203,6 +204,7 @@ public class CodeAutoGen {
     }  
     
     private void prepare() {
+      hasStringType = false;
       hasDateTimeType = hasDateType = false;
       hasBigDecimalType = false;
       hasBinary = false;
@@ -222,6 +224,8 @@ public class CodeAutoGen {
           hasBigDecimalType = true;
         } else if (field.type.equals("byte[]")) {
           hasBinary = true;
+        } else if (field.type.equals("String")) {
+          hasStringType = true;
         }
       }
     }
@@ -333,8 +337,8 @@ public class CodeAutoGen {
 
       if (field.isKey || field.isUid || field.isImmut) {
         cw.write(2, "sql.VALUES('%s', '#{%s}');", fieldVar, fieldVar);
-      } else if (field.timestamp && !field.autoUpdate) {
-        cw.write(2, "sql.VALUES('%s', 'NULL');", fieldVar);
+      } else if (field.timestamp) {
+        if (!field.autoUpdate) cw.write(2, "sql.VALUES('%s', 'NULL');", fieldVar);
       } 
     }
     cw.newLine();
@@ -486,8 +490,11 @@ public class CodeAutoGen {
     if (entityDesc.hasDateType) {
       cw.write("import org.springframework.format.annotation.DateTimeFormat;");
     }
-    cw.write("import org.jsondoc.core.annotation.*;")
-      .newLine();
+    cw.write("import org.jsondoc.core.annotation.*;");
+    if (entityDesc.hasStringType) {
+      cw.write("import commons.utils.XssHelper;");
+    }
+    cw.newLine();
 
     cw.write("@ApiObject(name = '%s', description = '%s')", source.entityClazz, source.entityClazz);
     cw.write("public class %s {", source.entityClazz);
@@ -522,6 +529,16 @@ public class CodeAutoGen {
       }
       cw.newLine();
     }
+
+    if (entityDesc.hasStringType) {
+      cw.write(2, "public void makeXssSafe() {");
+      for (FieldDesc field : entityDesc.fields) {
+        if (field.type.equals("String")) {
+          cw.write(4, "%s = XssHelper.escape(%s);", field.name, field.name);
+        }
+      }
+      cw.write(2, "}");
+    }
     
     for (FieldDesc field : entityDesc.fields) {
       cw.write(2, "public void set%s(%s %s) {", capitalize(field.name), field.type, field.name)
@@ -532,6 +549,27 @@ public class CodeAutoGen {
         .write(2, "}")
         .newLine();
     }
+
+    cw.write(2, "public String toString() {");
+    cw.write(4, "StringBuilder builder = new StringBuilder();")
+      .write(4, "builder.append('{');")
+      .newLine();
+    
+    boolean first = true;
+    for (FieldDesc field : entityDesc.fields) {
+      if (!first) cw.write(4, "builder.append('; ');").newLine();
+      first = false;
+      
+      if (field.type.equals("long") || field.type.equals("int") || field.type.equals("String")) {
+        cw.write(4, "builder.append('%s = ').append(%s);", field.name, field.name);
+      } else {
+        cw.write(4, "builder.append('%s = ').append(%s.toString());", field.name, field.name);
+      }
+    }
+    cw.write(4, "builder.append('}');")
+      .newLine()
+      .write(4, "return builder.toString();")
+      .write(2, "}");
 
     cw.write("}");
     return cw.toString();
@@ -625,7 +663,7 @@ public class CodeAutoGen {
     }
 
     for (FieldDesc f : entityDesc.fields) {
-      if (f.name.equals(primaryKey) || f.timestamp && f.autoUpdate ||
+      if (f.name.equals(primaryKey) || (f.timestamp && f.autoUpdate) ||
           f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
 
       cw.write(2, "@ApiQueryParam(name = '%s', description = '%s', required = false)",
@@ -651,7 +689,7 @@ public class CodeAutoGen {
       .write(2, "%s %s = new %s();", source.entityClazz, source.entityVar, source.entityClazz);
                
     for (FieldDesc f : entityDesc.fields) {
-      if (f.timestamp && f.autoUpdate ||
+      if ((f.timestamp && f.autoUpdate) ||
           f.isImmut || f.isUid || f.isDelay || f.isInternal) continue;
       
       if (f.name.equals(primaryKey)) {

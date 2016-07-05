@@ -1,6 +1,8 @@
 package commons.mybatis;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -27,7 +29,7 @@ public class Paging extends HashMap<String, Object> {
                            rowId, table, rowId, rowId, rowId, count);
       
     } else if (where == null && !backward) {
-      return String.format("SELECT %s FROM %s WHERE %s > #{%s} ORDER BY %s DESC LIMIT %d",
+      return String.format("SELECT %s FROM %s WHERE %s > #{%s} ORDER BY %s ASC LIMIT %d",
                            rowId, table, rowId, rowId, rowId, count);
       
     } else if (where != null && first) {
@@ -39,7 +41,7 @@ public class Paging extends HashMap<String, Object> {
                            rowId, table, where, rowId, rowId, rowId, count);
       
     } else if (where != null && !backward) {
-      return String.format("SELECT %s FROM %s WHERE (%s) AND %s > #{%s} ORDER BY %s DESC LIMIT %d",
+      return String.format("SELECT %s FROM %s WHERE (%s) AND %s > #{%s} ORDER BY %s ASC LIMIT %d",
                            rowId, table, where, rowId, rowId, rowId, count);
     } else {
       throw new IllegalArgumentException();
@@ -73,6 +75,27 @@ public class Paging extends HashMap<String, Object> {
       this.where = this.where + " AND " + where;
     }
     return this;
+  }
+
+  public <T> Paging andInCluster(String field, List<T> list, Class<T> clazz) {
+    if (list == null || list.isEmpty()) return this;
+    
+    try {
+      Method method = clazz.getMethod("getValue");
+      
+      StringBuilder builder = new StringBuilder();
+      builder.append(field).append(" in (");
+      
+      String separator = "";
+      for (T t : list) {
+        builder.append(separator).append(method.invoke(t));
+        separator = ",";
+      }
+      builder.append(')');
+      return andWhere(builder.toString());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public Paging setFields(String fields) {
@@ -149,8 +172,13 @@ public class Paging extends HashMap<String, Object> {
     }
   }
 
-  public static <T> List<Page<T>> pages(List<T> list, int count) {
+  public static <T extends Comparable> List<Page<T>> pages(List<T> list, int count) {
     List<Page<T>> pageList = new ArrayList<>();
+    if (list.size() >= 2) {
+      @SuppressWarnings("unchecked")
+      int r = list.get(0).compareTo(list.get(1));
+      if (r < 0) Collections.reverse(list);
+    }
     
     for (int i = 0; i < list.size(); i += count) {
       T max = list.get(i);
