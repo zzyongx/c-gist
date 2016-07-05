@@ -1,11 +1,16 @@
 package lib;
 
-@Grab('mysql:mysql-connector-java:5.1.39')
 @GrabConfig(systemClassLoader = true)
+@Grab('mysql:mysql-connector-java:5.1.39')
 @Grab('org.codehaus.groovy.modules.http-builder:http-builder:0.7.1')
-@Grab('org.slf4j:slf4j-simple:1.7.16')
+@GrabExclude('xml-apis:xml-apis')
 @Grab('com.jayway.jsonpath:json-path:2.2.0')
+/* we must provide a slf4j implement for jsonpath */
+@Grab('org.slf4j:slf4j-simple:1.7.16')
+@Grab('org.apache.httpcomponents:httpmime:4.5.2')
 
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.sql.Sql
 import groovyx.net.http.URIBuilder
 import groovyx.net.http.HTTPBuilder
@@ -15,7 +20,12 @@ import static groovyx.net.http.Method.PUT
 import static groovyx.net.http.Method.DELETE
 import static groovyx.net.http.ContentType.TEXT
 import static groovyx.net.http.ContentType.URLENC
+import org.apache.http.entity.mime.MultipartEntityBuilder
+import org.apache.http.entity.mime.HttpMultipartMode
+import org.apache.http.entity.ContentType
+import org.apache.http.conn.EofSensorInputStream
 import com.jayway.jsonpath.JsonPath
+import com.jayway.jsonpath.PathNotFoundException
 
 class JsonReader {
   def ctx
@@ -30,12 +40,16 @@ class JsonReader {
 
 class BDD {
   def stat = [req: 0, assert: 0]
+
+  def coverKey  
+  def cover = [:]
     
   def g =
     [ debug: true,
       server: null,
       query: [:],
       body: null,
+      multi: null,
       headers: [:],
       requestContentType: URLENC,
       contentType: TEXT ];
@@ -46,7 +60,7 @@ class BDD {
   def resp, respBody
 
   // expect
-  def http, json
+  def http, json, string
 
   // save
   def cookie = [:]
@@ -55,9 +69,10 @@ class BDD {
   def obj = [:]
 
   def reset() {
-    r = g.clone();
+    r = g.clone()
     http = [:]
     json = [:]
+    string = null
   }
 
   def config(Map config) {
@@ -66,7 +81,29 @@ class BDD {
     }
   }
 
+  def coverKey(method, url) {
+    if (url instanceof String) {
+      return "$method:$url";
+    } else {
+      def nurl = String.join("{}", url.getStrings());
+      return "$method:$nurl";
+    }
+  }
+
+  def coverAddReq() {
+    if (cover[coverKey]) {
+      cover[coverKey].req++
+    } else {
+      cover[coverKey] = [req: 1, assert: 0]
+    }
+  }
+  
+  def coverAddAssert() {
+    cover[coverKey].assert++;
+  }
+
   def http(method, url, config) {
+    coverKey = coverKey(method, url)
     reset()
 
     if (config) {
@@ -95,48 +132,81 @@ class BDD {
     }
 
     stat.req++;
+    coverAddReq();
+    
     if (r.debug) {
-      println "DEBUG REQUEST: ${reqUri}"
+      println "DEBUG REQUEST: $method ${reqUri}"
+      if (reqUri.query) println "DEBUG REQUEST QUERY: ${reqUri.query}"
+      if (r.body && r.requestContentType != 'application/octet-stream') {
+        println "DEBUG REQUEST BODY: ${r.body}"
+      }
       println "DEBUG REQUEST COOKIE: ${http.headers.cookie}"
     }
       
-    http.request(method) {
+    http.request(method) { req ->
       uri.path = url
       uri.query = r.query
       
       if (method == POST || method == PUT) {
-        body = r.body
-        requestContentType = r.requestContentType
+        if (r.multi) {
+          def builder = MultipartEntityBuilder.create();
+          builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+          r.multi.each {k, v ->
+            if (v instanceof Map) {
+              builder.addBinaryBody(k, v.file, ContentType.DEFAULT_BINARY, v.filename)
+            } else {
+              builder.addTextBody(k, v);
+            }
+          }
+          req.setEntity(builder.build());
+          requestContentType = "multipart/form-data"
+        } else {
+          body = r.body
+          requestContentType = r.requestContentType
+        }
       }
 
       response.success = { resp, body ->
         this.resp = resp
-        this.respBody = body
+        if (body instanceof Reader) {
+          this.respBody = body.text
+        } else if (body instanceof EofSensorInputStream) {
+          this.respBody = null
+        } else {
+          this.respBody = body
+        }
       }
 
       response.failure = { resp ->
         this.resp = resp
+        this.respBody = null
       }
     }
+    if (r.debug) println("DEBUG RESPONSE: ${respBody}")
   }
 
   def expect(config) {
     config.delegate = this
     config.call()
-
+    
     stat.assert++
+    coverAddAssert()
+
     if (http.code) assert http.code == resp.status
     else assert 200 == resp.status
 
-    if (json) {
+    if (string) {
+      stringExpect();
+    } else if (json) {
       jsonExpect()
     }
   }
 
+  def stringExpect() {
+    assert string == respBody
+  }
 
   def jsonExpect() {
-    if (r.debug) println("DEBUG RESPONSE: ${respBody}")
-    
     def ctx = JsonPath.parse(respBody)
     assert null != ctx
     
@@ -150,6 +220,10 @@ class BDD {
       } else if (value == IsInteger) {
         def actual = ctx.read('$.' + key)
         assert actual instanceof Integer || actual instanceof Long
+      } else if (value == NotFound) {
+        try {
+          assert null == ctx.read('$.' + key)
+        } catch (PathNotFoundException e) {}
       } else if (value == NotEmpty) {
         assert 0 != ctx.read('$.' + key + ".length()")
       } else if (value instanceof Grep) {
@@ -157,10 +231,14 @@ class BDD {
         this.obj = [:]
         closure.delegate = this
         closure.call()
-
+        
         assert ctx.read('$.' + key).find {
+          def ctxs = JsonPath.parse(it)
+          
           obj.every { k, v ->
-            it[k] == v
+            try {
+              ctxs.read('$.' + k) == v
+            } catch (PathNotFoundException e) {}
           }
         }
         
@@ -239,7 +317,7 @@ class BDD {
   }
 
   /* all test database must have same password */
-  static SQL(def mix) {
+  static SQL(def mix, def closure = null) {
     def cfg = SQL_CFG
     def user = cfg.'jdbc.username'
     def url = cfg.'jdbc.url'
@@ -255,20 +333,31 @@ class BDD {
       sql = mix
     }
 
-    Sql.withInstance(url, user, cfg.'jdbc.password', cfg.'jdbc.driver') { db ->
-      db.execute(sql)
+    def password = cfg.'jdbc.password', driver = cfg.'jdbc.driver'
+    println "DEBUG SQL: $sql"
+
+    if (closure) {
+      Sql.withInstance(url, user, password, driver) { db ->
+        db.eachRow(sql, closure)
+      }
+    } else {
+      Sql.withInstance(url, user, password, driver) { db ->
+        db.execute(sql)
+      }
     }
   }
 
   static STAT() {
     println "req   : ${bdd.stat.req}"
     println "assert: ${bdd.stat.assert}"
+    COVER()
   }
 
   static NotNull   = { 1 }
   static IsString  = { 2 }
   static IsInteger = { 3 }
   static NotEmpty  = { 10 }
+  static NotFound  = { 11 }
 
   static class Grep {
     def closure
@@ -279,6 +368,39 @@ class BDD {
 
   static Grep(closure) {
     return new Grep(closure)
+  }
+
+  static COVER() {
+    def viewFile = new File(".", "bdd.cover.json")
+    def view = [:]
+    if (viewFile.exists()) {
+      view = new JsonSlurper().parseText(viewFile.text)
+    } else {
+      bdd.GET("/jsondoc") {
+        r.debug = false
+      }
+      bdd.respBody.apis[""].each { api ->
+        view[api.name] = [:]
+        api.methods.each { method ->
+          def verb = method.verb[0]
+          def path = method.path[0]
+          def nurl = path.replaceAll(/\{.+?\}/, '{}')
+
+          view[api.name]["$verb:$nurl"] = [method: verb, path: path, req: 0, assert: 0]
+        }
+      }
+    }
+
+    bdd.cover.each { k, v ->
+      view.each {name, map ->
+        if (map[k]) {
+          map[k].req += v.req
+          map[k].assert += v.assert
+        }
+      }
+    }
+
+    viewFile.write(JsonOutput.toJson(view))
   }
 }
 

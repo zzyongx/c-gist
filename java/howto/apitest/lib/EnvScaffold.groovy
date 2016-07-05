@@ -19,7 +19,7 @@ class EnvScaffold {
     def perms = param.get("perms") ?: ""
 
     def value = String.join(":", uid, token, name, createAt, incId, perms)
-    new Jedis(jedis).setex("RedisRMS_" + uid, 300, value)
+    new Jedis(jedis).setex("RedisRMS_" + uid, 3600, value)
   }
   
 }
