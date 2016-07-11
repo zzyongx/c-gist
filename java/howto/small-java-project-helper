@@ -43,7 +43,7 @@ sub init_project {
   `mkdir -p src/main/java/$pkgDir`;
 
   @dirFrame = ("entity", "manager", "api", "mapper", "model",
-               "config", "config/servlet", "config/jsondoc");
+               "config", "config/servlet");
   foreach my $dir (@dirFrame) {
     mkdir("src/main/java/$pkgDir/$dir");
   }
@@ -74,8 +74,7 @@ sub init_project {
               "$dstJavaDir/config/servlet/SecurityInitializer.java");
   }
 
-  copy_java($pkg, "$srcJavaDir/config/AutoCodeConfig.java", "$dstJavaDir/config/AutoCodeConfig.java");
-  copy_java($pkg, "$srcJavaDir/config/JsonDocConfig.java", "$dstJavaDir/config/JsonDocConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/BuildInApiConfig.java", "$dstJavaDir/config/BuildInApiConfig.java");
   copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java",
             $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
   copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
