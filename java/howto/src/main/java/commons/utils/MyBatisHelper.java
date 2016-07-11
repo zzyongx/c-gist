@@ -1,6 +1,7 @@
 package commons.utils;
 
 import java.util.List;
+import java.lang.reflect.Method;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
@@ -12,7 +13,8 @@ public class MyBatisHelper {
     List<Class<? extends Enum<?>>> enums = ReflectUtil.findEnums(packageName);
     for (Class<? extends Enum<?>> clazz : enums) {
       try {
-        clazz.getMethod("getValue");
+        Method method = clazz.getMethod("getValue");
+        if (method.getReturnType() != int.class) continue;
       } catch (Exception e) {
         continue;
       }
