@@ -15,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.authentication.RememberMeAuthenticationProvider;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import commons.utils.EnvHelper;
 
 class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
   static final String s401 = "{`code`: 401, `message`: `Unauthorized`}".replace('`', '"');
@@ -43,12 +44,11 @@ public class SecurityConfigWithRedisRememberMeService extends WebSecurityConfigu
   }
 
   boolean configUrlPermit(HttpSecurity http, boolean whiteList) throws Exception {
-    String config = whiteList ? "url.permit." : "url.deny.";
+    String config = whiteList ? "url.permit" : "url.deny";
     boolean hasConfig = false;
-    
-    for (int i = 1; i < 101; ++i) {
-      String request = env.getProperty(config + String.valueOf(i));
-      if (request == null) continue;
+
+    for (String name : EnvHelper.getPropertyNameWithPrefix(env, config)) {
+      String request = env.getProperty(name);
 
       hasConfig = true;
 
@@ -106,10 +106,8 @@ public class SecurityConfigWithRedisRememberMeService extends WebSecurityConfigu
     http.exceptionHandling()
       .authenticationEntryPoint(new RestAuthenticationEntryPoint());
 
-    if (!configUrlPermit(http, true)) {
-      if (!configUrlPermit(http, false)) {
-        configSitePermit(http);
-      }
+    if (!configUrlPermit(http, true) && !configUrlPermit(http, false)) {
+      configSitePermit(http);
     }
 
     http.rememberMe().rememberMeServices(rms);

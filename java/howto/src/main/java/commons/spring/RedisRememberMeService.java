@@ -325,6 +325,8 @@ public class RedisRememberMeService implements RememberMeServices {
     }
     if (queryString == null || !tokenPool.contains(queryString)) return null;
 
+    request.setAttribute("RmsUid", "__internal__");
+
     return new RememberMeAuthenticationToken("N/A", internalUser, internalGrantedAuths);
   }
 
@@ -347,6 +349,8 @@ public class RedisRememberMeService implements RememberMeServices {
 
     User user = checkToken(token);
     if (user == null) return null;
+
+    request.setAttribute("RmsUid", user.getId());
 
     List<GrantedAuthority> grantedAuths = new ArrayList<>();
     if (user.getPerms() != null) {

@@ -6,6 +6,11 @@ import com.fasterxml.jackson.databind.node.*;
 
 public class XssHelper {
   public static String escape(String unsafe) {
+    String safe = escapeImpl(unsafe);
+    return safe == null ? unsafe : safe;
+  }
+
+  public static String escapeImpl(String unsafe) {
     if (unsafe == null) return null;
 
     boolean f = false;
@@ -19,11 +24,12 @@ public class XssHelper {
       case '\'': c = '＇'; f = true; break;
       case '(' : c = '（'; f = true; break;
       case ')':  c = '）'; f = true; break;
+      default: break;
       }
       safe[i] = c;
     }
 
-    return f ? new String(safe) : unsafe;
+    return f ? new String(safe) : null;
   }
 
   static JsonNode makeJsonSafe(ArrayNode array) {
@@ -32,8 +38,8 @@ public class XssHelper {
       JsonNode node = array.get(i);
       if (node.isTextual()) {
         String unsafe = node.asText();
-        String safe = escape(unsafe);
-        if (unsafe != safe) {
+        String safe = escapeImpl(unsafe);
+        if (safe != null) {
           f = true;
           array.set(i, new TextNode(safe));
         }
@@ -61,8 +67,8 @@ public class XssHelper {
       JsonNode node = object.get(field);
       if (node.isTextual()) {
         String unsafe = node.asText();
-        String safe = escape(unsafe);
-        if (unsafe != safe) {
+        String safe = escapeImpl(unsafe);
+        if (safe != null) {
           f = true;
           object.set(field, new TextNode(safe));
         }

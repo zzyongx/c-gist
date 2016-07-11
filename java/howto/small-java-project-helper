@@ -99,7 +99,7 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/entity/Employee.java", "$dstJavaDir/entity/Employee.java");
 
   # copy apitest
-  mkdir("apitest/lib");
+  `mkdir -p apitest/lib`;
   `cp -ar $gist/apitest/lib/* apitest/lib`;
 
   # copy commons
