@@ -512,7 +512,7 @@ public class CodeAutoGen {
         .write(2, "}")
         .newLine();
       cw.write(2, "public static class %sText {", field.type)
-        .write(4, "public static final String PhText = '1';")
+        .write(4, "public static final String Ph = '1';")
         .write(2, "}")
         .newLine();
     }
