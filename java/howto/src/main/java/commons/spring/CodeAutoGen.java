@@ -504,11 +504,15 @@ public class CodeAutoGen {
       cw.write(2, "@ApiObject(name = '%s.%s', description = '%s %s')",
                source.entityClazz, field.type, source.entityClazz, field.type)
         .write(2, "public static enum %s {", field.type)
-        .write(4, "PH(1);")
+        .write(4, "Ph(1);")
         .newLine()
         .write(4, "private int value;")
         .write(4, "%s(int value) {this.value = value;}", field.type)
         .write(4, "public int getValue() {return this.value;}")
+        .write(2, "}")
+        .newLine();
+      cw.write(2, "public static class %sText {", field.type)
+        .write(4, "public static final String PhText = '1';")
         .write(2, "}")
         .newLine();
     }

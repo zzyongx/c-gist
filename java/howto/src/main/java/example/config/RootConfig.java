@@ -82,6 +82,7 @@ public class RootConfig {
   // TAG:RememberMeService
   @Bean
   public RedisRememberMeService rememberMeServices() {
-    return new RedisRememberMeService(jedisPool(), "", 86400 * 7);
+    return new RedisRememberMeService(
+      jedisPool(), env.getProperty("rest.tokenpool", ""), "", 86400 * 7);
   }
 }
