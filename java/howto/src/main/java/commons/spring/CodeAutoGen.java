@@ -541,7 +541,7 @@ public class CodeAutoGen {
           cw.write(4, "%s = XssHelper.escape(%s);", field.name, field.name);
         }
       }
-      cw.write(2, "}");
+      cw.write(2, "}").newLine();
     }
     
     for (FieldDesc field : entityDesc.fields) {

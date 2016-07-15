@@ -105,6 +105,9 @@ public class LoggerFilter implements Filter {
            contentType.startsWith("text/plain"))) {
         return true;
       }
+
+      int len = req.getContentLength();
+      if (len == 0) return true;
     }
     return false;
   }
@@ -160,7 +163,12 @@ public class LoggerFilter implements Filter {
       if (queryStr == null) queryStr = "-";
 
       if (respBody == null) respBody = "-";
-      logger.warn("{} {} {} {} {}", method, req.getRequestURI(), queryStr, reqBody, respBody);
+
+      String userId = (String) request.getAttribute("RmsUid");
+      if (userId == null) userId = "-";
+        
+      logger.warn("{} {} {} {} {} {}", method, req.getRequestURI(), queryStr,
+                  userId, reqBody, respBody);
     }
   }
 
