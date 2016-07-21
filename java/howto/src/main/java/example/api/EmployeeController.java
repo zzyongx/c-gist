@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.*;
 import org.springframework.validation.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
+import commons.spring.SimpleTransactionTemplate;
 import example.model.*;
 import example.entity.*;
 import example.mapper.*;
@@ -20,6 +21,7 @@ import example.mapper.*;
 @RequestMapping("/api")
 public class EmployeeController {
   @Autowired EmployeeMapper employeeMapper;
+  @Autowired SimpleTransactionTemplate stt;
 
   @ApiMethod(description = "Employee.getAll: Get all employees")
   @RequestMapping(value = "/employees", method = RequestMethod.GET)
@@ -67,6 +69,14 @@ public class EmployeeController {
     else return ApiResult.notFound();
   }
 
+  Long insertEmployeeInTrans(Employee e) throws Exception {
+    employeeMapper.add(e);
+    if (".".equals(e.getName())) {
+      throw new Exception("invalid name `.`");
+    }
+    return e.getId();
+  }
+
   @ApiMethod(description = "Employee.add: Add employee")
   @RequestMapping(value = "/employee", method = RequestMethod.POST,
                   consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
@@ -76,9 +86,19 @@ public class EmployeeController {
     if (bindingResult.hasErrors()) {
       return ApiResult.bindingResult(bindingResult);
     }
-    employeeMapper.add(employee);
+    long id = stt.call(() -> insertEmployeeInTrans(employee));
+    employee.setId(id);
+    
     return new ApiResult<Employee>(employee);
-  }  
+  }
+
+  /* for demo only */
+  void updateEmployeeInTrans(Employee e) {
+    employeeMapper.update(e);
+    if (".".equals(e.getName())) {
+      throw new RuntimeException("invalid name `.`");
+    }
+  }
 
   @ApiMethod(description = "Employee.update: modify employee info by id")
   @RequestMapping(value = "/employee/{id}", method = RequestMethod.PUT,
@@ -92,7 +112,7 @@ public class EmployeeController {
       return ApiResult.bindingResult(bindingResult);
     }
     employee.setId(id);
-    employeeMapper.update(employee);
+    stt.run(() -> updateEmployeeInTrans(employee));
     return new ApiResult<Employee>(employee);
   }
 

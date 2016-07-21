@@ -13,6 +13,8 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.support.TransactionTemplate;
+import commons.spring.SimpleTransactionTemplate;
 import commons.mybatis.*;
 import commons.utils.*;
 
@@ -67,5 +69,10 @@ public class DaoConfig {
   @Bean
   public DataSourceTransactionManager transactionManager() {
     return new DataSourceTransactionManager(dataSource());
+  }
+
+  @Bean SimpleTransactionTemplate simpleTransactionTemplate() {
+    TransactionTemplate tt = new TransactionTemplate(transactionManager());
+    return new SimpleTransactionTemplate(tt);
   }
 }

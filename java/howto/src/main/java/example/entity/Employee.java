@@ -13,7 +13,7 @@ public class Employee {
   };
   
   @ApiObjectField(description = "employee id")
-  long   id;
+  long   id = Long.MIN_VALUE;
 
   @ApiObjectField(description = "employee name", required = true)
   @NotBlank(message = "name is required")
