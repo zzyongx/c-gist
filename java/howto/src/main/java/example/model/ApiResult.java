@@ -52,6 +52,20 @@ public class ApiResult<Data> {
     this(code, Errno.getMessage(code), data);
   }
 
+  public static class AsException extends RuntimeException {
+    ApiResult result;
+    public AsException(ApiResult result) {
+      this.result = result;
+    }
+    public ApiResult get() {
+      return result;
+    }
+  }
+  
+  public RuntimeException toException() {
+    return new AsException(this);
+  }
+
   public static ApiResult ok() {
     return new ApiResult();
   }
