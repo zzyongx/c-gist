@@ -3,6 +3,18 @@ package example.entity;
 import org.hibernate.validator.constraints.NotBlank;
 import org.jsondoc.core.annotation.*;
 
+/*
+CREATE TABLE `employee` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(10) NOT NULL,
+  `department` varchar(16) DEFAULT NULL,
+  `position` varchar(16) DEFAULT NULL,
+  `phone` int(11) DEFAULT NULL,
+  `gender` tinyint(4) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf-8;
+*/
+
 @ApiObject(name = "Employee", description = "Employee info")
 public class Employee {
   public static enum Gender {
