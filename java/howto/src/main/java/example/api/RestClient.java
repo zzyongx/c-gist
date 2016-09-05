@@ -12,7 +12,7 @@ import example.model.*;
   description = "Demonstrate how to use RestTemplate"
 )
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/restclient")
 public class RestClient {
   public static class Version {
     private String version;
@@ -44,6 +44,16 @@ public class RestClient {
   public ApiResult version() {
     Version version = restTemplate.getForObject(VERSION_URI, Version.class);
     return new ApiResult<Version>(version);
+  }
+
+  @ApiMethod(description = "update version, it will be failed")
+  @RequestMapping(value = "/version", method = RequestMethod.PUT)
+  public ApiResult testPostForObject() {
+    Version version = new Version();
+    version.setVersion("1.1");
+    version.setLicense("GPL");
+    restTemplate.postForObject(VERSION_URI, version, Version.class);
+    return ApiResult.ok();
   }
 
   public static class StringMap extends HashMap<String, String> {}
