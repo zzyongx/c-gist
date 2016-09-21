@@ -31,11 +31,12 @@ public class ApiResult<Data> {
   void setErrorHint() {
     HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
                                   .getRequestAttributes()).getRequest();
-    String error = String.valueOf(code) + ":" +
-      (message.length() > 84 ? message.substring(0, 84) : message);
+    String error     = String.valueOf(code) + ":" + message;
+    String errHeader = error.length() > 90 ? error.substring(0, 90) : error;
+
     HttpServletResponse response = (HttpServletResponse) request.getAttribute("response__");
-    if (response != null) response.setHeader("ApiResultError", error);
-    request.setAttribute("ApiResultError", error);
+    if (response != null) response.setHeader("ApiResultError", errHeader);
+    request.setAttribute("ApiResultError", error);    
   }
 
   public ApiResult(int code, String message) {

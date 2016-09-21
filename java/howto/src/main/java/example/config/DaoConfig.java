@@ -48,6 +48,7 @@ public class DaoConfig {
 
     TypeHandler[] handlers = new TypeHandler[] {
       new LocalDateTimeTypeHandler(),
+      new LocalDateTypeHandler(),
     };
     sqlSessionFactoryBean.setTypeHandlers(handlers);
     
