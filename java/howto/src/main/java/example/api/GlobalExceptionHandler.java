@@ -3,6 +3,7 @@ package example.api;
 import com.google.common.base.Throwables;
 import org.springframework.beans.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.dao.DataAccessException;
 import example.model.*;
@@ -51,5 +52,12 @@ public class GlobalExceptionHandler {
   @ResponseBody
   public ApiResult typeMismatchException(Exception e) {
     return new ApiResult(Errno.BAD_REQUEST, e.toString());
+  }
+
+  @ExceptionHandler(ResourceAccessException.class)
+  @ResponseBody
+  public ApiResult resourceAccessException(Exception e) {
+    e.printStackTrace();
+    return new ApiResult(Errno.INTERNAL_ERROR, e.getMessage());
   }
 }
