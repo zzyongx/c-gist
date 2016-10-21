@@ -47,11 +47,20 @@ public class RootConfig {
 
   @Bean
   public JedisPool jedisPool() {
-    return new JedisPool(
-      env.getRequiredProperty("redis.url"),
-      env.getRequiredProperty("redis.port", Integer.class));
+    String pass = env.getProperty("redis.pass");
+    if (pass != null) {
+      return new JedisPool(
+        new JedisPoolConfig(),
+        env.getRequiredProperty("redis.url"),
+        env.getRequiredProperty("redis.port", Integer.class),
+        2, pass);  // 2 second
+    } else {
+      return new JedisPool(
+        env.getRequiredProperty("redis.url"),
+        env.getRequiredProperty("redis.port", Integer.class));
+    }
   }
-
+  
   @Bean
   public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
     ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
