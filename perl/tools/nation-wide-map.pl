@@ -7,7 +7,6 @@ use Data::Dumper;
 use Encode qw /decode_utf8 encode_utf8/;
 use JSON::PP 'encode_json';
 
-
 my $SP = decode_utf8("　");
 
 my @map;
@@ -41,4 +40,3 @@ while (my $line = <>) {
 
 # print Dumper(\@map);
 print encode_json(\@map);
-
