@@ -1,6 +1,8 @@
 package example.config;
 
 import java.util.Arrays;
+import javax.management.ObjectName;
+import javax.management.MalformedObjectNameException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -10,7 +12,9 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.jmx.export.annotation.AnnotationMBeanExporter;
 import org.springframework.jmx.support.MBeanServerFactoryBean;
+import org.springframework.jmx.support.RegistrationPolicy;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 import commons.spring.*;
 import commons.saas.RestNameService;
 
@@ -32,8 +36,18 @@ public class RootConfig {
 
   @Bean
   public AnnotationMBeanExporter annotationMBeanExporter() {
-    return new AnnotationMBeanExporter();
-  }
+    AnnotationMBeanExporter exporter = new AnnotationMBeanExporter() {
+      @Override
+      protected ObjectName getObjectName(Object bean, String beanKey)
+        throws MalformedObjectNameException {
+        
+        ObjectName objName = super.getObjectName(bean, beanKey);
+        return ObjectName.getInstance(ProjectInfo.PKG_PREFIX, objName.getKeyPropertyList());
+      }
+    };
+    exporter.setRegistrationPolicy(RegistrationPolicy.IGNORE_EXISTING);
+    return exporter;
+  }  
 
   @Bean
   public LoggerFilter loggerFilter() {

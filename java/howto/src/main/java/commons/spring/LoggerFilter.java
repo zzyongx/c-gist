@@ -54,7 +54,7 @@ public class LoggerFilter implements Filter {
   }
 
   @ManagedAttribute(description="The logHttpPut Attribute", defaultValue="false")
-  public boolean setLogHttpPut() {
+  public boolean getLogHttpPut() {
     return this.logHttpPut;
   }
   
@@ -155,7 +155,6 @@ public class LoggerFilter implements Filter {
       response.getOutputStream().write(bytes);
       if (bytes != null) respBody = new String(bytes);
     } else if (logError) {
-      reqBody = req.getParameterMap().toString(); // try best to get more information
       respBody = (String) request.getAttribute("ApiResultError");
     }
 
