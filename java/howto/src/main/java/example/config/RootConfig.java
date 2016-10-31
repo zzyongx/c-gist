@@ -67,7 +67,7 @@ public class RootConfig {
         new JedisPoolConfig(),
         env.getRequiredProperty("redis.url"),
         env.getRequiredProperty("redis.port", Integer.class),
-        2, pass);  // 2 second
+        2000, pass);  // 2 second
     } else {
       return new JedisPool(
         env.getRequiredProperty("redis.url"),
