@@ -60,6 +60,11 @@
 (require 'saveplace)
 (setq-default save-place t)
 
+;; M-x delete-trailing-whitespace
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+;; (add-hook 'c-mode-hook
+;;           (lambda () (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
+
 ;; imenu
 (global-set-key [(control c)(i)] 'imenu)
 ;; M-. find tag
