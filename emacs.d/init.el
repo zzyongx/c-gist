@@ -103,6 +103,7 @@
 ;; M-x universal-coding-system-argument
 
 ;; M-x org-version
+;; M-x set-buffer-file-coding-system utf-8-unix
 
 ;; move around window
 (global-set-key [M-left]  'windmove-left)
@@ -135,4 +136,3 @@
  '(font-lock-function-name-face ((t (:foreground "blue" :weight bold))))
  '(which-func ((t (:foreground "magenta")))))
 (put 'erase-buffer 'disabled nil)
-
