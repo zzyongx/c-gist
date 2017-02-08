@@ -100,6 +100,8 @@ public class RootConfig {
   @Bean
   public RedisRememberMeService rememberMeServices() {
     return new RedisRememberMeService(
-      jedisPool(), env.getProperty("rest.tokenpool", ""), "", 86400 * 7);
+      jedisPool(), env.getProperty("rest.tokenpool", ""),
+      env.getProperty("rest.inner", Boolean.class, false),
+      env.getProperty("rest.anonymous", ""));
   }
 }

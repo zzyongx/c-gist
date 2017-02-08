@@ -4,12 +4,12 @@ package lib;
 import redis.clients.jedis.Jedis;
 
 class EnvScaffold {
-  static jedis = "127.0.0.1"
+  static jedis = [host: "127.0.0.1", port: 6379]
 
   static logout(uid) {
-    new Jedis(jedis).del("RedisRMS_" + uid);
+    new Jedis(jedis.host, jedis.port).del("RedisRMS_" + uid);
   }
-  
+
   static login(Map param) {
     def uid = param.get("uid")
     def token = param.get("token")
@@ -19,7 +19,7 @@ class EnvScaffold {
     def perms = param.get("perms") ?: ""
 
     def value = String.join(":", uid, token, name, createAt, incId, perms)
-    new Jedis(jedis).setex("RedisRMS_" + uid, 3600, value)
+    new Jedis(jedis.host, jedis.port).setex("RedisRMS_" + uid, 3600, value)
   }
-  
+
 }

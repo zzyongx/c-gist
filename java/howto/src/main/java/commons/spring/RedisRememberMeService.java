@@ -97,11 +97,18 @@ public class RedisRememberMeService implements RememberMeServices {
     private String           name;
     private int              incId;
     private List<UserPerm>   perms;
-    private boolean          internal;
+    private boolean          internal = false;
+    private boolean          anonymous = false;
 
     public static User internal() {
       User user = new User(0, "__", 0, Arrays.asList(new UserPerm(1L)));
       user.internal = true;
+      return user;
+    }
+
+    public static User anonymous() {
+      User user = new User(-1, "anonymous", -1, null);
+      user.anonymous = true;
       return user;
     }
 
@@ -188,7 +195,7 @@ public class RedisRememberMeService implements RememberMeServices {
     }
 
     public long getPerm() {
-      if (perms == null) return Long.MAX_VALUE;
+      if (perms == null || perms.isEmpty()) return Long.MAX_VALUE;
       else return perms.get(0).getPermId();
     }
 
@@ -331,6 +338,7 @@ public class RedisRememberMeService implements RememberMeServices {
 
   private Set<String> tokenPool = new HashSet<>();
   private boolean     tokenInnerOnly = false;
+  private Set<String> anonymousPool = new HashSet<>();
   private JedisPool   jedisPool;
   private String      domain;
   private int         maxAge;
@@ -338,36 +346,60 @@ public class RedisRememberMeService implements RememberMeServices {
   private String       cookiePrefix = "";
 
   private static final String KEY_PREFIX   = "RedisRMS_";
+
   private static final User internalUser = User.internal();
   private static List<GrantedAuthority> internalGrantedAuths = Arrays.asList(
     new SimpleGrantedAuthority("ROLE_SYSINTERNAL")
     );
 
+  private static final User anonymousUser = User.anonymous();
+  private static List<GrantedAuthority> anonymousGrantedAuths = Arrays.asList(
+    new SimpleGrantedAuthority("ROLE_ANONYMOUS")
+    );
 
+  // login provider
   public RedisRememberMeService(JedisPool jedisPool, String domain, int maxAge) {
-    this(jedisPool, "", domain, maxAge);
-  }
-
-  public RedisRememberMeService(JedisPool jedisPool, String tokenPool, String domain, int maxAge) {
-    this(jedisPool, tokenPool, false, domain, maxAge);
-  }
-
-  public RedisRememberMeService(JedisPool jedisPool, String tokenPool, boolean tokenInnerOnly,
-                                String domain, int maxAge) {
-    this(jedisPool, tokenPool, tokenInnerOnly, domain, "", maxAge);
+    this(jedisPool, "", true, domain, "", maxAge);
   }
 
   public RedisRememberMeService(JedisPool jedisPool, String tokenPool, boolean tokenInnerOnly,
                                 String domain, String excludeDomain, int maxAge) {
+    this(jedisPool, tokenPool, tokenInnerOnly, "", domain, excludeDomain, maxAge);
+  }
+
+  // login user
+  public RedisRememberMeService(JedisPool jedisPool, String tokenPool, boolean tokenInnerOnly) {
+    this(jedisPool, tokenPool, tokenInnerOnly, "");
+  }
+
+  public RedisRememberMeService(
+    JedisPool jedisPool, String tokenPool, boolean tokenInnerOnly, String anonymousPool) {
+    this(jedisPool, tokenPool, tokenInnerOnly, anonymousPool, "", "", 86400 * 7);
+  }
+
+  public RedisRememberMeService(
+    JedisPool jedisPool, String tokenPool, boolean tokenInnerOnly,
+    String anonymousPool, String domain, String excludeDomain, int maxAge) {
+
     this.jedisPool = jedisPool;
 
     this.domain = domain;
     this.maxAge = maxAge;
 
     this.tokenInnerOnly = tokenInnerOnly;
-    for (String token : tokenPool.split(",")) {
-      this.tokenPool.add(token);
+
+    if (tokenPool != null && !tokenPool.isEmpty()) {
+      for (String token : tokenPool.split(",")) {
+        this.tokenPool.add(token);
+      }
     }
+
+    if (anonymousPool != null && !anonymousPool.isEmpty()) {
+      for (String token : anonymousPool.split(",")) {
+        this.anonymousPool.add(token);
+      }
+    }
+
     if (excludeDomain.isEmpty()) {
       this.excludeDomains = new ArrayList<>();
     } else {
@@ -520,6 +552,13 @@ public class RedisRememberMeService implements RememberMeServices {
     return new RememberMeAuthenticationToken("N/A", internalUser, internalGrantedAuths);
   }
 
+  Authentication autoLoginByAnonymous(HttpServletRequest request) {
+    String anonymous = request.getHeader("x-req-anonymous");
+    if (anonymous == null || !anonymousPool.contains(anonymous)) return null;
+
+    return new RememberMeAuthenticationToken("N/A", anonymousUser, anonymousGrantedAuths);
+  }
+
   Authentication autoLoginByRedisPool(HttpServletRequest request) {
     String token = null;
     String openId = null;
@@ -557,6 +596,8 @@ public class RedisRememberMeService implements RememberMeServices {
   @Override
   public Authentication autoLogin(HttpServletRequest request, HttpServletResponse response) {
     Authentication auth = autoLoginByTokenPool(request);
+    if (auth != null) return auth;
+    auth = autoLoginByAnonymous(request);
     if (auth != null) return auth;
     return autoLoginByRedisPool(request);
   }
