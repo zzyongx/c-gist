@@ -20,6 +20,7 @@ import static groovyx.net.http.Method.PUT
 import static groovyx.net.http.Method.DELETE
 import static groovyx.net.http.ContentType.TEXT
 import static groovyx.net.http.ContentType.URLENC
+import static groovyx.net.http.ContentType.JSON
 import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.entity.mime.HttpMultipartMode
 import org.apache.http.entity.ContentType
@@ -32,7 +33,7 @@ class JsonReader {
   def JsonReader(ctx) {
     this.ctx = ctx;
   }
-    
+
   def propertyMissing(String name) {
     ctx.read('$.' + name)
   }
@@ -41,9 +42,9 @@ class JsonReader {
 class BDD {
   def stat = [req: 0, assert: 0]
 
-  def coverKey  
+  def coverKey
   def cover = [:]
-    
+
   def g =
     [ debug: true,
       server: null,
@@ -53,7 +54,7 @@ class BDD {
       headers: [:],
       requestContentType: URLENC,
       contentType: TEXT ];
-  
+
   def r = null
 
   // response
@@ -97,7 +98,7 @@ class BDD {
       cover[coverKey] = [req: 1, assert: 0]
     }
   }
-  
+
   def coverAddAssert() {
     cover[coverKey].assert++;
   }
@@ -121,7 +122,7 @@ class BDD {
     }
 
     URIBuilder reqUri = new URIBuilder(url)
-    reqUri.query = r.query    
+    reqUri.query = r.query
 
     if (r.body instanceof String ||
         r.body instanceof GString ||
@@ -133,7 +134,7 @@ class BDD {
 
     stat.req++;
     coverAddReq();
-    
+
     if (r.debug) {
       println "DEBUG REQUEST: $method ${reqUri}"
       if (reqUri.query) println "DEBUG REQUEST QUERY: ${reqUri.query}"
@@ -142,11 +143,11 @@ class BDD {
       }
       println "DEBUG REQUEST COOKIE: ${http.headers.cookie}"
     }
-      
+
     http.request(method) { req ->
       uri.path = url
       uri.query = r.query
-      
+
       if (method == POST || method == PUT) {
         if (r.multi) {
           def builder = MultipartEntityBuilder.create();
@@ -160,6 +161,9 @@ class BDD {
           }
           req.setEntity(builder.build());
           requestContentType = "multipart/form-data"
+        } else if (r.requestContentType == "JSON") {
+          body = groovy.json.JsonOutput.toJson(r.body);
+          requestContentType = JSON;
         } else {
           body = r.body
           requestContentType = r.requestContentType
@@ -188,7 +192,7 @@ class BDD {
   def expect(config) {
     config.delegate = this
     config.call()
-    
+
     stat.assert++
     coverAddAssert()
 
@@ -209,7 +213,7 @@ class BDD {
   def jsonExpect() {
     def ctx = JsonPath.parse(respBody)
     assert null != ctx
-    
+
     json.each {key, value ->
       stat.assert++;
 
@@ -231,17 +235,17 @@ class BDD {
         this.obj = [:]
         closure.delegate = this
         closure.call()
-        
+
         assert ctx.read('$.' + key).find {
           def ctxs = JsonPath.parse(it)
-          
+
           obj.every { k, v ->
             try {
               ctxs.read('$.' + k) == v
             } catch (PathNotFoundException e) {}
           }
         }
-        
+
       } else if (key == 'closure') {
         value.call(new JsonReader(ctx))
       } else {
@@ -301,7 +305,7 @@ class BDD {
           properties.load(it)
         }
       } catch(e) {}
-    } 
+    }
 
     return properties
   }
@@ -322,7 +326,7 @@ class BDD {
     def user = cfg.'jdbc.username'
     def url = cfg.'jdbc.url'
     def sql
-    
+
     if (mix instanceof Map) {
       user = mix.user ?: user
       sql = mix.sql
@@ -403,4 +407,3 @@ class BDD {
     viewFile.write(JsonOutput.toJson(view))
   }
 }
-
