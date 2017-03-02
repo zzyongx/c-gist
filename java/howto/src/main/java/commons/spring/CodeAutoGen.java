@@ -154,7 +154,6 @@ public class CodeAutoGen {
   public static class EntityDesc {
     public boolean hasStringType;
     public boolean hasDateTimeType;
-    public boolean hasDateType;
     public boolean hasBigDecimalType;
     public boolean hasBinary;
 
@@ -206,7 +205,7 @@ public class CodeAutoGen {
 
     private void prepare(String sql) {
       hasStringType = false;
-      hasDateTimeType = hasDateType = false;
+      hasDateTimeType = false;
       hasBigDecimalType = false;
       hasBinary = false;
       hasPrimaryKey = isPrimaryKeyAutoIncrement = false;
@@ -221,7 +220,6 @@ public class CodeAutoGen {
         }
         if (field.type.equals("LocalDateTime") || field.type.equals("LocalDate")) {
           hasDateTimeType = true;
-          if (field.type.equals("LocalDate")) hasDateType = true;
         } else if (field.type.equals("BigDecimal")) {
           hasBigDecimalType = true;
         } else if (field.type.equals("byte[]")) {
@@ -489,7 +487,7 @@ public class CodeAutoGen {
     if (entityDesc.hasBigDecimalType) cw.write("import java.math.BigDecimal;");
     if (entityDesc.hasDateTimeType) cw.write("import java.time.*;");
     cw.write("import javax.validation.constraints.*;");
-    if (entityDesc.hasDateType) {
+    if (entityDesc.hasDateTimeType) {
       cw.write("import org.springframework.format.annotation.DateTimeFormat;");
     }
     cw.write("import org.jsondoc.core.annotation.*;");
@@ -528,6 +526,8 @@ public class CodeAutoGen {
       } else {
         if (field.type.equals("LocalDate")) {
           cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)");
+        } else if (field.type.equals("LocalDateTime")) {
+          cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)");
         } else if (field.type.equals("String") && field.size != null) {
           cw.write(2, "@Size(max = %s)", field.size);
         }
@@ -678,6 +678,9 @@ public class CodeAutoGen {
       if (f.type.equals("LocalDate")) {
         cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)")
           .write(2, "@RequestParam Optional<LocalDate> %s,", f.name);
+      } else if (f.type.equals("LocalDateTime")) {
+        cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)")
+          .write(2, "@RequestParam Optional<LocalDateTime> %s,", f.name);
       } else if (f.type.equals("byte[]")) {
         cw.write(2, "@RequestParam MultipartFile %s,", f.name);
       } else if (f.isEnum) {
@@ -751,8 +754,10 @@ public class CodeAutoGen {
     cw.write("import org.jsondoc.core.annotation.*;");
     cw.write("import org.springframework.beans.factory.annotation.Autowired;");
     cw.write("import org.springframework.validation.*;");
+    cw.write("import org.springframework.validation.annotation.Validated");
     cw.write("import org.springframework.web.bind.annotation.*;");
-    if (entityDesc.hasDateType) {
+
+    if (entityDesc.hasDateTimeType) {
       cw.write("import org.springframework.format.annotation.DateTimeFormat;");
     }
     if (entityDesc.hasPrimaryKey) {
@@ -773,6 +778,7 @@ public class CodeAutoGen {
 
     cw.write("@Api(name = '%s API', description = '%s')", source.className, source.className)
       .write("@RestController")
+      .write("// @Validated")
       .write("@RequestMapping('/api')")
       .write("public class %s {", source.controllerClazz)
       .write(2, "@Autowired %s %s;", source.managerClazz, source.managerVar)

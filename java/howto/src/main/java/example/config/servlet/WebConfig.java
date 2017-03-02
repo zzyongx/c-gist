@@ -12,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.*;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 import commons.utils.LocalDateTimeJsonSerializer;
 import commons.utils.LocalDateJsonSerializer;
 import example.config.*;
@@ -24,8 +25,8 @@ public class WebConfig extends WebMvcConfigurerAdapter {
   public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
     StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
     stringConverter.setWriteAcceptCharset(false);
-    converters.add(stringConverter);    
-      
+    converters.add(stringConverter);
+
     Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
     builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     builder.featuresToDisable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
@@ -38,12 +39,17 @@ public class WebConfig extends WebMvcConfigurerAdapter {
   @Bean
   public MultipartResolver multipartResolver() throws IOException {
     return new StandardServletMultipartResolver();
-  }  
+  }
 
   @Bean
   public RequestMappingHandlerMapping requestMappingHandlerMapping() {
     RequestMappingHandlerMapping r = new RequestMappingHandlerMapping();
     r.setRemoveSemicolonContent(false);
     return r;
+  }
+
+  @Bean
+  public MethodValidationPostProcessor methodValidationPostProcessor() {
+    return new MethodValidationPostProcessor();
   }
 }
