@@ -47,13 +47,13 @@
       <artifactId>spring-jdbc</artifactId>
       <version>${spring.version}</version>
     </dependency>
-    
+
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-config</artifactId>
       <version>${spring-security.version}</version>
     </dependency>
-    
+
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-web</artifactId>
@@ -64,7 +64,7 @@
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-validator</artifactId>
       <version>5.2.4.Final</version>
-    </dependency>    
+    </dependency>
 
     <dependency>
       <groupId>org.aspectj</groupId>
@@ -156,11 +156,13 @@
       <artifactId>jsondoc-springmvc</artifactId>
       <version>1.2.11</version>
     </dependency>
+    <!--PATCHCA BEGIN-->
     <dependency>
       <groupId>org.patchca</groupId>
       <artifactId>patchca</artifactId>
       <version>0.6.0</version>
     </dependency>
+    <!--PATCHCA END-->
     <dependency>
       <groupId>com.qcloud</groupId>
       <artifactId>qcloud-sdk</artifactId>

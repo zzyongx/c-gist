@@ -106,6 +106,10 @@ sub init_project {
   `rm -f  src/main/java/commons/spring/AnalogueJsonObjectFormatter.java`;
   `rm -f  src/main/java/commons/spring/ListObjectHttpMessageConverter.java`;
 
+  unless ($opt{withPatchca}) {
+    `rm -f src/main/java/commons/saas/PatchcaService.java`;
+  }
+
   put_file_contents(".gitignore", "target\n");
   `rm -rf .c-gist`;
 }
@@ -177,11 +181,18 @@ sub pkg_info {
 sub copy_pom {
   my ($src, $dst) = @_;
 
+
+  $patchca = ""
+
   my $c = get_file_contents($src);
   my ($groupId, $artifactId) = ($opt{groupId}, $opt{artifactId});
   $c =~ s|<groupId>spring-howto</groupId>|<groupId>$groupId</groupId>|g;
   $c =~ s|<artifactId>rest-example</artifactId>|<artifactId>$artifactId</artifactId>|g;
   $c =~ s|<name>rest-example</name>|<name>$artifactId</name>|g;
+
+  unless ($opt{withPatchca}) {
+    $c =~ s|<!--PATCHCA BEGIN-->.+<!--PATCHCA END-->||sg;
+  }
   put_file_contents($dst, $c);
 }
 
@@ -230,7 +241,7 @@ sub help {
   }
   print {$fh} "$0 COMMAND [ARGS]\n";
   print {$fh} "COMMAND LIST\n";
-  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity\n";
+  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity --withPatchca\n";
   print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
   print {$fh} "\n";
   print {$fh} "coding-for-me use `curl http://localhost/api/code/help` for help\n";

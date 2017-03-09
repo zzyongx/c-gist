@@ -128,6 +128,9 @@
 (setq sr-speedbar-right-side nil)
 (global-set-key (kbd "M-s M-s") 'sr-speedbar-toggle)
 
+;; diff
+(setq ediff-split-window-function 'split-window-horizontally)
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
