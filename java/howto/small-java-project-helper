@@ -108,6 +108,7 @@ sub init_project {
 
   unless ($opt{withPatchca}) {
     `rm -f src/main/java/commons/saas/PatchcaService.java`;
+    `rm -f src/main/java/commons/utils/PatchcaHelper.java`;
   }
 
   put_file_contents(".gitignore", "target\n");
@@ -180,9 +181,6 @@ sub pkg_info {
 
 sub copy_pom {
   my ($src, $dst) = @_;
-
-
-  $patchca = ""
 
   my $c = get_file_contents($src);
   my ($groupId, $artifactId) = ($opt{groupId}, $opt{artifactId});
