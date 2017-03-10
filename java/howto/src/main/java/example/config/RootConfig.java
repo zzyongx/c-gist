@@ -89,8 +89,11 @@ public class RootConfig {
     factory.setConnectTimeout(Integer.parseInt(env.getProperty("rest.timeout.connect", "1000")));
     factory.setReadTimeout(Integer.parseInt(env.getProperty("rest.timeout.read", "10000")));
 
+    RestTemplateFilter filter = new RestTemplateFilter();
+    filter.replaceHeader("Accept", Arrays.asList("*/*"));
+
     RestTemplate rest = new RestTemplate(factory);
-    rest.setInterceptors(Arrays.asList(new RestTemplateFilter()));
+    rest.setInterceptors(Arrays.asList(filter));
     rest.getMessageConverters().add(new LooseGsonHttpMessageConverter());
 
     return rest;
