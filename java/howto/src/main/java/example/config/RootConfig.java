@@ -99,9 +99,11 @@ public class RootConfig {
   // TAG:RememberMeService
   @Bean
   public RedisRememberMeService rememberMeServices() {
-    return new RedisRememberMeService(
+    RedisRememberMeService rms = new RedisRememberMeService(
       jedisPool(), env.getProperty("rest.tokenpool", ""),
       env.getProperty("rest.inner", Boolean.class, false),
       env.getProperty("rest.anonymous", ""));
+    rms.setCookiePrefix(env.getProperty("login.cookieprefix", ""));
+    return rms;
   }
 }

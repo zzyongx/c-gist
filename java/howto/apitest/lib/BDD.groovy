@@ -45,6 +45,8 @@ class BDD {
   def coverKey
   def cover = [:]
 
+  def env = DEVCFG();
+
   def g =
     [ debug: true,
       server: null,
@@ -115,9 +117,16 @@ class BDD {
     def http = new HTTPBuilder(r.server)
     http.headers = [*:g.headers, *:r.headers]
 
-    if (!http.headers.cookie) {
+    def cookiep = env.'login.cookieprefix';
+
+    if (http.headers.cookie) {
+      if (cookiep != null) {
+        http.headers.cookie = http.headers.cookie.replace("token=", cookiep + "_token=");
+      }
+    } else {
       cookie.each {key, value ->
-        http.headers["cookie"] = key + "=" + value
+        def mkey = (key == "token" && cookiep != null) ? cookiep + "_token" : key;
+        http.headers["cookie"] = mkey + "=" + value
       }
     }
 
