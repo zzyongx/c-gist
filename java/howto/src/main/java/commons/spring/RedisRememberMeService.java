@@ -442,12 +442,16 @@ public class RedisRememberMeService implements RememberMeServices {
   }
 
   public String login(HttpServletResponse response, User user) {
+    return login(response, user, false);
+  }
+
+  public String login(HttpServletResponse response, User user, boolean relogin) {
     CacheEntity cacheEntity = CacheEntity.buildFromUser(user);
 
     try (Jedis c = jedisPool.getResource()) {
       String key = cacheKey(cacheEntity.uid);
       String token = c.get(key);
-      if (token != null) {
+      if (token != null && !relogin) {
         String parts[] = token.split(":");
         if (parts.length >= 2) {
           cacheEntity.token = parts[1];
@@ -592,6 +596,7 @@ public class RedisRememberMeService implements RememberMeServices {
       }
     }
 
+    request.setAttribute("RmsUid", user.getId());
     return new RememberMeAuthenticationToken("N/A", user, grantedAuths);
   }
 
