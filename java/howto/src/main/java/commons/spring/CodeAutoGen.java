@@ -754,7 +754,7 @@ public class CodeAutoGen {
     cw.write("import org.jsondoc.core.annotation.*;");
     cw.write("import org.springframework.beans.factory.annotation.Autowired;");
     cw.write("import org.springframework.validation.*;");
-    cw.write("import org.springframework.validation.annotation.Validated");
+    cw.write("import org.springframework.validation.annotation.Validated;");
     cw.write("import org.springframework.web.bind.annotation.*;");
 
     if (entityDesc.hasDateTimeType) {
