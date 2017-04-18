@@ -8,10 +8,21 @@ import org.apache.commons.codec.binary.Hex;
 
 public class DigestHelper {
   private static final Charset charset = Charset.forName("UTF-8");
-  
+
   public static String sha1(byte[] input) {
     try {
       MessageDigest crypt = MessageDigest.getInstance("SHA-1");
+      crypt.reset();
+      crypt.update(input);
+      return Hex.encodeHexString(crypt.digest());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static String sha256(byte[] input) {
+    try {
+      MessageDigest crypt = MessageDigest.getInstance("SHA-256");
       crypt.reset();
       crypt.update(input);
       return Hex.encodeHexString(crypt.digest());
