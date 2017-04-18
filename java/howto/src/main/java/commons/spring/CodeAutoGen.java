@@ -54,11 +54,12 @@ public class CodeAutoGen {
     public boolean isUid;
     public boolean isDelay;
     public boolean isInternal;
+    public boolean isRequired;
 
     private FieldDesc() {
       isPrimary = isAutoIncrement = isKey = false;
       timestamp = autoUpdate = false;
-      isEnum = isImmut = isUid = isDelay = isInternal = false;
+      isEnum = isImmut = isUid = isDelay = isInternal = isRequired = false;
     }
 
     private void fixWithTips(String tableSql, String field) {
@@ -80,7 +81,7 @@ public class CodeAutoGen {
               this.type = tip.substring(typeStart+1);
             } else if (tip.equals("immut")) {
               this.isImmut = true;
-            } else if (tip.equals("EN")) {
+            } else if (tip.equals("EN") && this.size != null) {
               this.size = String.valueOf(Integer.parseInt(this.size) * 2);
             } else if (tip.equals("delay")) {
               this.isDelay = true;
@@ -88,6 +89,8 @@ public class CodeAutoGen {
               this.isUid = true;
             } else if (tip.equals("internal")) {
               this.isInternal = true;
+            } else if (tip.equals("required")) {
+              this.isRequired = true;
             }
           }
         }
@@ -519,8 +522,12 @@ public class CodeAutoGen {
 
     for (FieldDesc field : entityDesc.fields) {
       cw.write(2, "@ApiObjectField(description = '%s')", field.name);
-      if (field.type.equals("long")) {
-        cw.write(2, "%s %s = Long.MIN_VALUE;", field.type, field.name);
+      if (field.type.equals("long") || field.type.equals("int")) {
+        if (field.isRequired) {
+          cw.write(2, "@Min(value = 0, message = '%s is required')", field.name);
+        }
+        String def = field.type.equals("logn") ? "Long.MIN_VALUE" : "Integer.MIN_VALUE";
+        cw.write(2, "%s %s = %s;", field.type, field.name, def);
       } else if (field.type.equals("int")) {
         cw.write(2, "%s %s = Integer.MIN_VALUE;", field.type, field.name);
       } else {
@@ -529,7 +536,13 @@ public class CodeAutoGen {
         } else if (field.type.equals("LocalDateTime")) {
           cw.write(2, "@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)");
         } else if (field.type.equals("String") && field.size != null) {
-          cw.write(2, "@Size(max = %s)", field.size);
+          if (field.isRequired) {
+            cw.write(2, "@NotNull").write(2, "@Size(min = 1, max = %s)", field.size);
+          } else {
+            cw.write(2, "@Size(max = %s)", field.size);
+          }
+        } else if (field.type.equals("String") && field.isRequired) {
+          cw.write(2, "@NotNull").write(2, "@Size(min = 1)");
         }
         cw.write(2, "%s %s;", field.type, field.name);
       }
@@ -860,6 +873,7 @@ public class CodeAutoGen {
              capitalize(primaryKey), entityDesc.primaryKeyType, primaryKey)
       .write(2, "%s %s = %s.findBy%s(%s);", source.entityClazz, source.entityVar, source.mapperVar,
              capitalize(primaryKey), primaryKey)
+      .write(2, "if (%s == null) return ApiResult.notFound();", source.entityVar)
       .write(2, "return new ApiResult<%s>(%s);", source.entityClazz, source.entityVar)
       .write("}");
 
@@ -1080,6 +1094,7 @@ public class CodeAutoGen {
       builder.append("  isUid:      ").append(boolToString(f.isUid));
       builder.append("  isDelay:    ").append(boolToString(f.isDelay));
       builder.append("  isInternal: ").append(boolToString(f.isInternal));
+      builder.append("  isRequired: ").append(boolToString(f.isRequired));
       builder.append("--\n");
     }
     return builder.toString();
@@ -1110,10 +1125,11 @@ public class CodeAutoGen {
     builder.append("If TINYINT with comment 'enum', it will be treat as enum type, and define a ENUM\n");
     builder.append("If TINYINT with comment 'class#Type', it will be treat as class type, and the type is Type\n");
     builder.append("If VARCHAR(N)/CHAR(N) with comment 'EN', it @Max will be N, or N/2\n");
-    builder.append("If with comment 'immut', it will only not be updated.\n");
+    builder.append("If with comment 'immut', it can not be updated.\n");
     builder.append("If with comment 'uid', it will be set from User, 'uid' will always be 'immut'\n");
     builder.append("If with comment 'delay', it will be updated after insert.\n");
-    builder.append("If with comment 'internal', it will not be update from outside.\n");
+    builder.append("If with comment 'internal', it should not be update from outside.\n");
+    builder.append("If with comment 'required', add annotation to entity to ensure present.\n");
     builder.append("comment can be combined with comma(,), example 'EN,delay'\n");
     builder.append("\n");
 
