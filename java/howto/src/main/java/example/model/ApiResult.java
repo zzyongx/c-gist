@@ -28,7 +28,7 @@ public class ApiResult<Data> {
     this(code, Errno.getMessage(code));
   }
 
-  void setErrorHint() {
+  private void setErrorHint() {
     HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
                                   .getRequestAttributes()).getRequest();
     String error     = String.valueOf(code) + ":" + message;
@@ -36,7 +36,12 @@ public class ApiResult<Data> {
 
     HttpServletResponse response = (HttpServletResponse) request.getAttribute("response__");
     if (response != null) response.setHeader("ApiResultError", errHeader);
-    request.setAttribute("ApiResultError", error);    
+    request.setAttribute("ApiResultError", error);
+  }
+
+  public static ApiResult wrap(ApiResult rc) {
+    if (rc.code != Errno.OK) rc.setErrorHint();
+    return rc;
   }
 
   public ApiResult(int code, String message) {
@@ -48,7 +53,7 @@ public class ApiResult<Data> {
   public ApiResult(Data data) {
     this(Errno.OK, Errno.getMessage(Errno.OK), data);
   }
-  
+
   public ApiResult(int code, Data data) {
     this(code, Errno.getMessage(code), data);
   }
@@ -62,7 +67,7 @@ public class ApiResult<Data> {
       return result;
     }
   }
-  
+
   public RuntimeException toException() {
     return new AsException(this);
   }
@@ -82,7 +87,7 @@ public class ApiResult<Data> {
   public static ApiResult forbidden() {
     return new ApiResult(Errno.FORBIDDEN);
   }
-  
+
   public static ApiResult notFound() {
     return new ApiResult(Errno.NOT_FOUND);
   }
@@ -105,7 +110,7 @@ public class ApiResult<Data> {
 
   public static Errno.BadRequestException badRequestException() {
     return new Errno.BadRequestException();
-  }  
+  }
 
   public static ApiResult bindingResult(BindingResult bindingResult) {
     Map<String, String> map = new HashMap<>();
@@ -114,12 +119,12 @@ public class ApiResult<Data> {
     }
     return new ApiResult<Map>(Errno.BAD_REQUEST, map);
   }
-  
+
   public ApiResult(int code, String message, Data data) {
     this.code = code;
     this.message = message;
     this.data = data;
-  }  
+  }
 
   public int getCode() {
     return code;
