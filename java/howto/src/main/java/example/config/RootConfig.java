@@ -1,6 +1,7 @@
 package example.config;
 
 import java.util.Arrays;
+import java.util.Hashtable;
 import javax.management.ObjectName;
 import javax.management.MalformedObjectNameException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,11 @@ public class RootConfig {
   @Autowired Environment env;
 
   @Bean
+  public CountLogger countLogger() {
+    return CountLogger.register(env.getProperty("ops.counter"));
+  }
+
+  @Bean
   public MBeanServerFactoryBean mbeanServer() {
     MBeanServerFactoryBean mbeanServer = new MBeanServerFactoryBean();
     mbeanServer.setDefaultDomain(ProjectInfo.PKG_PREFIX);
@@ -42,10 +48,15 @@ public class RootConfig {
         throws MalformedObjectNameException {
 
         ObjectName objName = super.getObjectName(bean, beanKey);
-        return ObjectName.getInstance(ProjectInfo.PKG_PREFIX, objName.getKeyPropertyList());
+
+        Hashtable<String, String> ht = objName.getKeyPropertyList();
+        if ("counter".equals(ht.get("name"))) ht.put("type", beanKey);
+
+        return ObjectName.getInstance(ProjectInfo.PKG_PREFIX, ht);
       }
     };
     exporter.setRegistrationPolicy(RegistrationPolicy.IGNORE_EXISTING);
+    exporter.setBeans(countLogger().getBeans());
     return exporter;
   }
 

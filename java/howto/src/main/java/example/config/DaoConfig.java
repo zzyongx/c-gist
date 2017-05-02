@@ -51,7 +51,7 @@ public class DaoConfig {
       new LocalDateTypeHandler(),
     };
     sqlSessionFactoryBean.setTypeHandlers(handlers);
-    
+
     SqlSessionFactory sqlSessionFactory = (SqlSessionFactory) sqlSessionFactoryBean.getObject();
 
     org.apache.ibatis.session.Configuration configuration = sqlSessionFactory.getConfiguration();
@@ -61,6 +61,7 @@ public class DaoConfig {
     configuration.setLazyLoadingEnabled(false);
     configuration.setAggressiveLazyLoading(true);
     configuration.setDefaultStatementTimeout(300);
+    configuration.setLogPrefix("dao.");
     MyBatisHelper.registerEnumHandler(
       configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 
