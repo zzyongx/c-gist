@@ -159,7 +159,7 @@ public class LoggerFilter implements Filter {
       respBody = (String) request.getAttribute("ApiResultError");
     }
 
-    if (log || logError) {
+    if (log || logError && respBody != null) {
       String queryStr = req.getQueryString();
       if (queryStr == null) queryStr = "-";
 
