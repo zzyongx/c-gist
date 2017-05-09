@@ -62,6 +62,14 @@ public class DaoConfig {
     configuration.setAggressiveLazyLoading(true);
     configuration.setDefaultStatementTimeout(300);
     configuration.setLogPrefix("dao.");
+
+    Properties properties = new Properties();
+    properties.put("sql.slowLimit", env.getProperty("sql.slowLimit", "-1"));
+
+    SlowLogInterceptor slowLogInterceptor = new SlowLogInterceptor();
+    slowLogInterceptor.setProperties(properties);
+    configuration.addInterceptor(slowLogInterceptor);
+
     MyBatisHelper.registerEnumHandler(
       configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 

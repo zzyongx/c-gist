@@ -1,7 +1,10 @@
 package commons.spring;
 
+import java.io.*;
+import java.nio.charset.*;
 import java.sql.*;
 import java.util.*;
+import javax.servlet.http.*;
 import org.jsondoc.core.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -579,11 +582,7 @@ public class CodeAutoGen {
       if (!first) cw.write(4, "builder.append('; ');").newLine();
       first = false;
 
-      if (field.type.equals("long") || field.type.equals("int") || field.type.equals("String")) {
-        cw.write(4, "builder.append('%s = ').append(%s);", field.name, field.name);
-      } else {
-        cw.write(4, "builder.append('%s = ').append(%s.toString());", field.name, field.name);
-      }
+      cw.write(4, "builder.append('%s=').append(%s);", field.name, field.name);
     }
     cw.write(4, "builder.append('}');")
       .newLine()
@@ -971,13 +970,16 @@ public class CodeAutoGen {
   }
 
   @ApiMethod(description = "Get Mapper/Entity/Controller/Manager code")
-  @RequestMapping(value = {"/", "/{typeOpt}"}, method = RequestMethod.GET,
-                  produces = "text/plain"
-  )
-  public String getMapperCode(
+  @RequestMapping(value = {"/", "/{typeOpt}"}, method = RequestMethod.GET)
+  public void genCode(
+    HttpServletResponse response,
+
     @ApiPathParam(name = "type", description = "code type",
                   allowedvalues = {"mapper", "entity", "api", "manager", ""})
     @PathVariable Optional<String> typeOpt,
+
+    @ApiQueryParam(name = "html", description = "Content-Type")
+    @RequestParam Optional<Boolean> html,
 
     @ApiQueryParam(name = "dbHostPort", description = "mysql host:port")
     @RequestParam String dbHostPort,
@@ -1006,7 +1008,7 @@ public class CodeAutoGen {
     @ApiQueryParam(name = "nopaging", description = "without paging, default no")
     @RequestParam Optional<Boolean> nopaging,
     @ApiQueryParam(name = "nopublic", description = "without controller/manager, default no")
-    @RequestParam Optional<Boolean> nopublic) {
+    @RequestParam Optional<Boolean> nopublic)  throws IOException {
 
     String parts[] = table.split("\\.");
     if (parts.length != 2) {
@@ -1037,49 +1039,99 @@ public class CodeAutoGen {
     source.controllerClazz = genControllerClassName(source.className);
 
     String type = typeOpt.orElse("");
+    EntityDesc desc = EntityDesc.buildFromTable(source);
+    String data;
+
     if (type.equals("mapper")) {
-      return genMapperCode(source, EntityDesc.buildFromTable(source));
+      data = wrap(source.mapperClazz, genMapperCode(source, desc), html.orElse(false));
     } else if (type.equals("entity")) {
-      return genEntityCode(source, EntityDesc.buildFromTable(source));
+      data = wrap(source.entityClazz, genEntityCode(source, desc), html.orElse(false));
     } else if (type.equals("api")) {
-      return genControllerCode(source, EntityDesc.buildFromTable(source));
+      data = wrap(source.controllerClazz, genControllerCode(source, desc), html.orElse(false));
     } else if (type.equals("manager")) {
-      return genManagerCode(source, EntityDesc.buildFromTable(source));
+      data = wrap(source.managerClazz, genManagerCode(source, desc), html.orElse(false));
     } else if (type.equals("meta")) {
-      return genMeta(EntityDesc.buildFromTable(source));
+      html = Optional.of(false);
+      data = wrap(null, genMeta(desc), false);
     } else {
-      return genCode(source);
+      data = genCode(source, desc, html.orElse(false));
     }
+
+    OutputStream os = response.getOutputStream();
+    response.setContentType(html.orElse(false) ? "text/html" : "text/plain");
+    os.write(data.getBytes(StandardCharsets.UTF_8));
   }
 
-  String genCode(EntitySource source) {
-    EntityDesc desc = EntityDesc.buildFromTable(source);
+  private String htmlHead(String head) {
+    return "<!DOCTYPE html><meta charset=\"utf-8\" /><title>" + head + "</title>" +
+      "<link rel=\"stylesheet\" href=\"//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/styles/default.min.css\">" +
+      "<script src=\"//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js\"></script>" +
+      "<script src=\"//cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.6.0/clipboard.min.js\"></script>" +
+      "<script>hljs.initHighlightingOnLoad();</script>" +
+      "<style>" +
+      "  .copy {display: block; width:100px; height: 30px; text-align: center; border: 1px solid red; color: red; float: right; line-height: 30px; text-decoration: none; font-size: 12px; margin-right: 10px; margin-top: 10px; }" +
+      "  h5 {float:left;}" +
+      " .clear:after, .clear:before {display: table; content: \" \"}" +
+      " .clear:after {clear: both;}" +
+      "</style>";
+  }
+
+  private String htmlFoot() {
+    return "<script>" +
+      "  var clipboard = new Clipboard('.copy');" +
+      "  clipboard.on('success', function(e) { e.clearSelection(); alert('代码已复制'); });" +
+      "  clipboard.on('error', function(e) { alert('浏览器不支持复制，请使用Chrome42+,IE9+,Firefowx41+,Safari10+'); });" +
+      "</script>";
+  }
+
+  private String wrap(String head, String data, boolean html) {
+    if (html) {
+      data = htmlHead(head) +
+        "<div class=\"clear\"><h5>" + head + "</h5>" +
+        "<a href='javascript:;' data-clipboard-action='copy' data-clipboard-target='code' class='copy'>复制代码</a></div>" +
+        "<pre><code class='java' id='#code'>" + data + "</code></pre>" +
+        htmlFoot();
+    }
+    return data;
+  }
+
+  private String genCode(EntitySource source, EntityDesc desc, boolean html) {
+    List<String> datas = new ArrayList<>();
+    List<String> heads = new ArrayList<>();
+
+    datas.add(genMapperCode(source, desc));
+    heads.add(genMapperClassName(source.className));
+
+    datas.add(genEntityCode(source, desc));
+    heads.add(genEntityClassName(source.className));
+
+    if (!source.nopublic) {
+      datas.add(genControllerCode(source, desc));
+      heads.add(genControllerClassName(source.className));
+
+      datas.add(genManagerCode(source, desc));
+      heads.add(genManagerClassName(source.className));
+    }
 
     StringBuilder builder = new StringBuilder();
+    if (html) builder.append(htmlHead(source.className));
 
-    builder.append("== BEGIN ").append(genMapperClassName(source.className)).append(" ==\n");
-    builder.append(genMapperCode(source, desc));
-    builder.append("== END ").append(genMapperClassName(source.className)).append(" ==\n");
-
-    builder.append("== BEGIN ").append(genEntityClassName(source.className)).append(" ==\n");
-    builder.append(genEntityCode(source, desc));
-    builder.append("== END ").append(genEntityClassName(source.className)).append(" ==\n");
-
-    if (source.nopublic) return builder.toString();
-
-    builder.append("== BEGIN ").append(genControllerClassName(source.className)).append(" ==\n");
-    builder.append(genControllerCode(source, desc));
-    builder.append("== END ").append(genControllerClassName(source.className)).append(" ==\n");
-
-    builder.append("== BEGIN ").append(genManagerClassName(source.className)).append(" ==\n");
-    builder.append(genManagerCode(source, desc));
-    builder.append("== END ").append(genManagerClassName(source.className)).append(" ==\n");
+    for (int i = 0; i < datas.size(); ++i) {
+      if (html) {
+        builder.append("<div class=\"clear\"><h5>").append(heads.get(i)).append("</h5>");
+        builder.append("<a href='javascript:;' data-clipboard-action='copy' data-clipboard-target='#")
+          .append(heads.get(i)).append("' class='copy'>复制代码</a></div>");
+        builder.append("<pre><code class='java' id='").append(heads.get(i)).append("'>")
+          .append(datas.get(i)).append("</code></pre>");
+      } else {
+        builder.append("== BEGIN ").append(heads.get(i)).append(" ==\n");
+        builder.append(datas.get(i));
+        builder.append("== END ").append(heads.get(i)).append(" ==\n");
+      }
+    }
+    if (html) builder.append(htmlFoot());
 
     return builder.toString();
-  }
-
-  private String boolToString(boolean b) {
-    return b ? "TRUE\n" : "FALSE\n";
   }
 
   public String genMeta(EntityDesc entityDesc) {
@@ -1089,12 +1141,12 @@ public class CodeAutoGen {
       builder.append("  name:       ").append(f.name).append("\n");
       builder.append("  type:       ").append(f.type).append("\n");
       builder.append("  size:       ").append(f.size).append("\n");
-      builder.append("  isEnum:     ").append(boolToString(f.isEnum));
-      builder.append("  isImmut:    ").append(boolToString(f.isImmut));
-      builder.append("  isUid:      ").append(boolToString(f.isUid));
-      builder.append("  isDelay:    ").append(boolToString(f.isDelay));
-      builder.append("  isInternal: ").append(boolToString(f.isInternal));
-      builder.append("  isRequired: ").append(boolToString(f.isRequired));
+      builder.append("  isEnum:     ").append(f.isEnum).append("\n");
+      builder.append("  isImmut:    ").append(f.isImmut).append("\n");
+      builder.append("  isUid:      ").append(f.isUid).append("\n");
+      builder.append("  isDelay:    ").append(f.isDelay).append("\n");
+      builder.append("  isInternal: ").append(f.isInternal).append("\n");
+      builder.append("  isRequired: ").append(f.isRequired).append("\n");
       builder.append("--\n");
     }
     return builder.toString();
@@ -1144,6 +1196,7 @@ public class CodeAutoGen {
     builder.append("  nontrans      optional format(yes|no) default no. if yes, without @@Transactional\n");
     builder.append("  nopaging      optional format(yes|no) default no. if yes, without Paging\n");
     builder.append("  nopublic      optional format(yes|no) default no. if yes, without controller and manager\n");
+    builder.append("  html          optional format(yes|no) default no. if yes, content-type is html, you can copy it\n");
 
     return builder.toString();
   }
