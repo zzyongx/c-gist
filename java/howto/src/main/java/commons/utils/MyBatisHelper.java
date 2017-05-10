@@ -28,4 +28,17 @@ public class MyBatisHelper {
       }
     }
   }
+
+  public static String inClauseForList(int size, String name) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("(");
+
+    for (int i = 0; i < size; ++i) {
+      if (i != 0) builder.append(",");
+      builder.append("#{").append(name).append("[").append(i).append("]}");
+    }
+
+    builder.append(")");
+    return builder.toString();
+  }
 }
