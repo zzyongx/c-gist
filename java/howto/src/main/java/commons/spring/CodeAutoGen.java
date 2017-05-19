@@ -529,7 +529,7 @@ public class CodeAutoGen {
         if (field.isRequired) {
           cw.write(2, "@Min(value = 0, message = '%s is required')", field.name);
         }
-        String def = field.type.equals("logn") ? "Long.MIN_VALUE" : "Integer.MIN_VALUE";
+        String def = field.type.equals("long") ? "Long.MIN_VALUE" : "Integer.MIN_VALUE";
         cw.write(2, "%s %s = %s;", field.type, field.name, def);
       } else if (field.type.equals("int")) {
         cw.write(2, "%s %s = Integer.MIN_VALUE;", field.type, field.name);
@@ -546,6 +546,8 @@ public class CodeAutoGen {
           }
         } else if (field.type.equals("String") && field.isRequired) {
           cw.write(2, "@NotNull").write(2, "@Size(min = 1)");
+        } else if (field.isEnum) {
+          cw.write(2, "@NotNull");
         }
         cw.write(2, "%s %s;", field.type, field.name);
       }
