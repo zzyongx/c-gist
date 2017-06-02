@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     if (userId == null) userId = "-";
 
     String reqBody;
-    if ("POST".equals(method) || "PUT".equals("method")) {
+    if ("POST".equals(method) || "PUT".equals(method)) {
       reqBody = request.getParameterMap().toString();
     } else {
       reqBody = "-";
