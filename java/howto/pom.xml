@@ -13,10 +13,10 @@
     <java.version>1.8</java.version>
     <mybatis.version>3.2.4</mybatis.version>
     <mysql-connector.version>5.1.17</mysql-connector.version>
-    <spring.version>4.2.5.RELEASE</spring.version>
+    <spring.version>4.3.1.RELEASE</spring.version>
     <spring-security.version>4.1.0.RELEASE</spring-security.version>
     <jetty.http.port>8888</jetty.http.port>
-    <jackson.version>2.6.5</jackson.version>
+    <jackson.version>2.8.8</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -103,7 +103,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>15.0</version>
+      <version>21.0</version>
     </dependency>
 
     <dependency>
@@ -210,6 +210,12 @@
           <httpConnector>
             <port>${jetty.http.port}</port>
           </httpConnector>
+          <systemProperties>
+            <systemProperty>
+              <name>org.eclipse.jetty.annotations.maxWait</name>
+              <value>300</value>
+            </systemProperty>
+          </systemProperties>
         </configuration>
       </plugin>
     </plugins>
@@ -219,8 +225,22 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.9</version>
+
+        <configuration>
+          <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
         <version>2.5</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.17</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
