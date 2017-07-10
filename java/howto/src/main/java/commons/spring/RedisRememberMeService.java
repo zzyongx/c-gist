@@ -73,13 +73,13 @@ public class RedisRememberMeService implements RememberMeServices {
         String b[] = entity.split("-");
 
         // if !xpath A-B has perm A-B-C
-        // if xpath A-B-C has perm A-B
+        // if xpath A-B-C has perm A-B, A-B has perm A-B-C
 
         int i;
         for (i = 0; i < a.length && i < b.length; ++i) {
           if (!a[i].equals(b[i])) return false;
         }
-        if (xpath) return i == b.length && i <= a.length;
+        if (xpath) return true;
         else return i == a.length && i <= b.length;
       }
     }
