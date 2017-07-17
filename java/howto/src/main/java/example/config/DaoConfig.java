@@ -38,6 +38,7 @@ public class DaoConfig {
     dataSource.setRemoveAbandoned(true);
     dataSource.setRemoveAbandonedTimeout(180);
     dataSource.setConnectionProperties("clientEncoding=UTF-8");
+    dataSource.setConnectionInitSqls(Arrays.asList("set names utf8mb4;"));
     return dataSource;
   }
 

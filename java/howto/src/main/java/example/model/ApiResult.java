@@ -2,6 +2,7 @@ package example.model;
 
 import java.util.*;
 import javax.servlet.http.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import org.jsondoc.core.annotation.*;
@@ -39,15 +40,23 @@ public class ApiResult<Data> {
     request.setAttribute("ApiResultError", error);
   }
 
+  private void clearErrorHint() {
+    HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+                                  .getRequestAttributes()).getRequest();
+
+    HttpServletResponse response = (HttpServletResponse) request.getAttribute("response__");
+    if (response != null) response.setHeader("ApiResultError", "");
+    request.removeAttribute("ApiResultError");
+  }
+
   public static ApiResult wrap(ApiResult rc) {
     if (rc.code != Errno.OK) rc.setErrorHint();
+    else rc.clearErrorHint();
     return rc;
   }
 
   public ApiResult(int code, String message) {
-    this.code = code;
-    this.message = message;
-    if (this.code != Errno.OK) setErrorHint();
+    this(code, message, null);
   }
 
   public ApiResult(Data data) {
@@ -124,6 +133,14 @@ public class ApiResult<Data> {
     this.code = code;
     this.message = message;
     this.data = data;
+
+    if (this.code != Errno.OK) setErrorHint();
+    else clearErrorHint();
+  }
+
+  @JsonIgnore
+  public boolean isOk() {
+    return this.code == Errno.OK;
   }
 
   public int getCode() {
