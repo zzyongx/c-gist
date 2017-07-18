@@ -34,7 +34,7 @@ public class SlowLogInterceptor implements Interceptor {
       Object param       = args[1];
 
       BoundSql boundSql = ms.getBoundSql(param);
-      return boundSql.getSql() + " WITHPARAM " + param;
+      return boundSql.getSql().replace('\n', ' ') + " WITHPARAM " + param;
     } catch (Exception e) {
       logger.error("SlowLogInterceptor", e);
     }
