@@ -29,7 +29,9 @@ public class LocalDateTimeTypeHandler implements TypeHandler<LocalDateTime> {
 
   @Override
   public LocalDateTime getResult(CallableStatement cs, int columnIndex) throws SQLException {
-    return cs.getTimestamp(columnIndex).toLocalDateTime();
+    Timestamp ts = cs.getTimestamp(columnIndex);
+    if (null == ts) return null;
+    return ts.toLocalDateTime();
   }
 
   @Override

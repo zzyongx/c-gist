@@ -29,7 +29,9 @@ public class LocalDateTypeHandler implements TypeHandler<LocalDate> {
 
   @Override
   public LocalDate getResult(CallableStatement cs, int columnIndex) throws SQLException {
-    return cs.getDate(columnIndex).toLocalDate();
+    Date ts = cs.getDate(columnIndex);
+    if (null == ts) return null;
+    return ts.toLocalDate();
   }
 
   @Override
