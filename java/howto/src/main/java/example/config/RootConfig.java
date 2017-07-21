@@ -85,6 +85,8 @@ public class RootConfig {
     ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
     scheduler.setPoolSize(Integer.parseInt(env.getProperty("threadpool.max", "1")));
     scheduler.setWaitForTasksToCompleteOnShutdown(true);
+    scheduler.setAwaitTerminationSeconds(env.getProperty("threadpool.maxwait", Integer.class, 300));
+    scheduler.setErrorHandler(new ThreadPoolTaskSchedulerErrorHandler());
     return scheduler;
   }
 

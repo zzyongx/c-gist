@@ -74,6 +74,8 @@ public class DaoConfig {
     MyBatisHelper.registerEnumHandler(
       configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 
+    configuration.getTypeHandlerRegistry().register(new StringListTypeHandler());
+
     return sqlSessionFactory;
   }
 
