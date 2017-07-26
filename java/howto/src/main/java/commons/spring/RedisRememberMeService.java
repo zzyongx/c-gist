@@ -6,6 +6,8 @@ import javax.sql.DataSource;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.net.util.SubnetUtils;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,6 +16,7 @@ import org.springframework.security.authentication.RememberMeAuthenticationToken
 import org.springframework.security.web.authentication.RememberMeServices;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Jedis;
+import commons.utils.HttpHelper;
 import commons.utils.StringHelper;
 import commons.utils.Tuple2;
 
@@ -66,7 +69,7 @@ public class RedisRememberMeService implements RememberMeServices {
     public boolean entityEqual(String entity, boolean xpath) {
       if (this.entity == null) {
         return entity == null;
-      } else if (entity == null || entity.indexOf('-') == -1) {
+      } else if (entity == null || (!xpath && entity.indexOf('-') == -1)) {
         return this.entity.equals(entity);
       } else {
         String a[] = this.entity.split("-");
@@ -85,15 +88,21 @@ public class RedisRememberMeService implements RememberMeServices {
     }
 
     public boolean permEqual(long permId, String entity) {
-      return this.permId == permId && entityEqual(entity);
+      if (this.permId != permId) return false;
+
+      if (this.entity == null) return entity == null;
+      else return this.entity.equals(entity);
+    }
+
+    public boolean canFactGrantPerm(long permId, String entity) {
+      return canGrantPerm(permId, entity, false, true);
     }
 
     public boolean canGrantPerm(long permId, String entity) {
-      return canGrantPerm(permId, entity, false);
+      return canGrantPerm(permId, entity, false, false);
     }
 
-    public Optional<Boolean> checkPermException(long permId) {
-      List<Tuple2<Boolean, Long>> permIds = configPermException.get(this.permId);
+    private Optional<Boolean> checkPermException(long permId, List<Tuple2<Boolean, Long>> permIds) {
       if (permIds != null) {
         for (Tuple2<Boolean, Long> tuple : permIds) {
           if (tuple.s == permId) return Optional.of(tuple.f);
@@ -102,13 +111,22 @@ public class RedisRememberMeService implements RememberMeServices {
       return Optional.empty();
     }
 
+    public Optional<Boolean> checkPermException(long permId) {
+      Optional<Boolean> r = checkPermException(permId, configPermException.get(-1L));
+      return r.isPresent() ? r : checkPermException(permId, configPermException.get(this.permId));
+    }
+
     public boolean canGrantPerm(long permId, String entity, boolean xpath) {
+      return canGrantPerm(permId, entity, xpath, false);
+    }
+
+    public boolean canGrantPerm(long permId, String entity, boolean xpath, boolean fact) {
       boolean idOk;
       if (this.permId < 100) {          // Account.BOSS 100
         return false;
       } else if (this.permId <= 101) {  // Account.OWNER 101
         idOk = this.permId < permId;
-      } else if (configGrantPermId > 0) {
+      } else if (fact && configGrantPermId > 0) {
         idOk = (this.permId <= configGrantPermId && this.permId <= permId);
       } else if (this.permId < 9_999) { // Account.PERM_EXIST 9_999
         idOk = checkPermException(permId).orElse(this.permId <= permId);
@@ -121,12 +139,15 @@ public class RedisRememberMeService implements RememberMeServices {
 
     public boolean canRevokePerm(long permId, String entity) {
       boolean idOk = true;
-      if (this.permId < 9_999) {  // Account.PERM_EXIST 9_999
-        if (configRevokePermStrict) {
-          idOk = this.permId < permId;
-        } else {
-          idOk = this.permId <= permId;
-        }
+      if (this.permId < 100) {           // Account.BOSS 100
+        return false;
+      } else if (configGrantPermId > 0) {
+        idOk = (this.permId <= configGrantPermId && this.permId < permId);
+      } else if (this.permId < 9_999) {  // Account.PERM_EXIST 9_999
+        idOk = checkPermException(permId).orElse(
+          configRevokePermStrict ? this.permId < permId : this.permId <= permId);
+      } else {
+        idOk = checkPermException(permId).orElse(this.permId == permId);
       }
 
       return idOk && entityEqual(entity);
@@ -152,6 +173,7 @@ public class RedisRememberMeService implements RememberMeServices {
       return user;
     }
 
+    // api user run as admin
     public static User apiUser(String entity) {
       User user = new User(1, "__", -1, Arrays.asList(new UserPerm(entity, 201)));
       user.api = true;
@@ -268,12 +290,24 @@ public class RedisRememberMeService implements RememberMeServices {
       return false;
     }
 
+    public boolean canFactGrantPerm(long permId, String entity) {
+      return canGrantPerm(permId, entity, false, true);
+    }
+
     public boolean canGrantPerm(long permId, String entity) {
+      return canGrantPerm(permId, entity, false, false);
+    }
+
+    public boolean canGrantPerm(long permId, String entity, boolean xpath) {
+      return canGrantPerm(permId, entity, xpath, false);
+    }
+
+    public boolean canGrantPerm(long permId, String entity, boolean xpath, boolean fact) {
       if (isInternal()) return true;
 
       if (perms == null) return false;
       for (UserPerm perm : perms) {
-        if (perm.canGrantPerm(permId, entity)) return true;
+        if (perm.canGrantPerm(permId, entity, xpath, fact)) return true;
       }
       return false;
     }
@@ -314,6 +348,8 @@ public class RedisRememberMeService implements RememberMeServices {
       int i = 0;
       StringBuilder builder = new StringBuilder();
       for (UserPerm perm : perms) {
+        if (perm.getPermId() < 0) continue;
+
         if (i != 0) builder.append(",");
         builder.append(perm.toString());
         i++;
@@ -508,6 +544,8 @@ public class RedisRememberMeService implements RememberMeServices {
         String[] kv = o.split(":", 2);
         if (kv.length != 2) continue;
 
+        long permId = "*".equals(kv[0]) ? -1L : Long.parseLong(kv[0]);
+
         for (String permStr : kv[1].split(",")) {
           Tuple2<Boolean, Long> perm;
           if (permStr.charAt(0) == '!') {
@@ -515,8 +553,7 @@ public class RedisRememberMeService implements RememberMeServices {
           } else {
             perm = new Tuple2<>(true, Long.parseLong(permStr));
           }
-          this.configPermException.computeIfAbsent(
-            Long.parseLong(kv[0]), k -> new ArrayList<>()).add(perm);
+          this.configPermException.computeIfAbsent(permId, k -> new ArrayList<>()).add(perm);
         }
       }
     }
@@ -551,7 +588,7 @@ public class RedisRememberMeService implements RememberMeServices {
   }
 
   private String cacheApiKey(String uid) {
-    return KEY_PREFIX + "_API_" + uid;
+    return KEY_PREFIX + "API_" + uid;
   }
 
   public String login(HttpServletResponse response, User user) {
@@ -715,6 +752,68 @@ public class RedisRememberMeService implements RememberMeServices {
     return new RememberMeAuthenticationToken("N/A", user, grantedAuths);
   }
 
+  public static class AuthDbRow {
+    private String pass;
+    private List<String> cidrs;
+
+    public static AuthDbRow parse(String s) {
+      String part[] = s.split(":", 2);
+      if (part.length == 1) return new AuthDbRow(part[0]);
+      else return new AuthDbRow(part[0], Arrays.asList(part[1].split(",")));
+    }
+
+    public AuthDbRow() {}
+
+    public AuthDbRow(String pass) {
+      this.pass = pass;
+    }
+
+    public AuthDbRow(String pass, List<String> cidrs) {
+      this.pass = pass;
+      this.cidrs = cidrs;
+    }
+
+    public void setPass(String pass) {
+      this.pass = pass;
+    }
+    public String getPass() {
+      return this.pass;
+    }
+
+    public void setCidrs(String cidrs) {
+      if (cidrs != null && !cidrs.isEmpty()) {
+        this.cidrs = Arrays.asList(cidrs.split(","));
+      }
+    }
+    public List<String> getCidrs() {
+      return this.cidrs;
+    }
+
+    public boolean match(String pass, String ip) {
+      // disable api access
+      if (this.pass == null || this.pass.isEmpty()) return false;
+
+      if (!this.pass.equals(pass)) return false;
+
+      if (cidrs == null || cidrs.isEmpty()) return true;
+      for (String cidr : cidrs) {
+        boolean mat;
+        int idx = cidr.indexOf('/');
+        if (idx > 0) {  // found and not the first
+          mat = new SubnetUtils(cidr).getInfo().isInRange(ip);
+        } else {
+          mat = cidr.equals(ip);
+        }
+        if (mat) return true;
+      }
+      return false;
+    }
+
+    public String toString() {
+      return (cidrs == null || cidrs.isEmpty()) ? pass : pass + ":" + String.join(",", cidrs);
+    }
+  }
+
   private Authentication autoLoginByApiAuthDb(HttpServletRequest request) {
     if (dataSource == null || apiAuthSql == null) return null;
 
@@ -722,19 +821,20 @@ public class RedisRememberMeService implements RememberMeServices {
     String appSecret = request.getHeader("x-auth-appsecret");
     if (appKey == null || appSecret == null) return null;
 
-    String pass;
+    AuthDbRow authDbRow = null;
     try (Jedis c = jedisPool.getResource()) {
-      pass = c.get(cacheApiKey(appKey));
+      String value = c.get(cacheApiKey(appKey));
+      if (value != null) authDbRow = AuthDbRow.parse(value);
     }
 
-    if (!appSecret.equals(pass)) {
+    if (authDbRow == null || !authDbRow.match(appSecret, HttpHelper.getClientIp(request))) {
       JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-      pass = jdbc.queryForObject(apiAuthSql, String.class, appKey);
+      authDbRow = jdbc.queryForObject(apiAuthSql, new BeanPropertyRowMapper<AuthDbRow>(AuthDbRow.class), appKey);
 
-      if (!appSecret.equals(pass)) return null;
+      if (authDbRow == null || !authDbRow.match(appSecret, HttpHelper.getClientIp(request))) return null;
 
       try (Jedis c = jedisPool.getResource()) {
-        c.setex(cacheApiKey(appKey), 300, pass);
+        c.setex(cacheApiKey(appKey), 300, authDbRow.toString());
       }
     }
 
