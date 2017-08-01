@@ -1,5 +1,6 @@
 package example.api;
 
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
@@ -50,6 +51,13 @@ public class GlobalExceptionHandler {
   public ApiResult internalServerError(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
     return new ApiResult(Errno.INTERNAL_ERROR, e.toString());
+  }
+
+  @ExceptionHandler(URISyntaxException.class)
+  @ResponseBody
+  public ApiResult uriSyntaxException(Exception e) {
+    logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
+    return new ApiResult(Errno.BAD_REQUEST, e.toString());
   }
 
   @ExceptionHandler(DataAccessException.class)
