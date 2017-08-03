@@ -10,7 +10,8 @@ import org.springframework.http.*;
 import commons.spring.SimpleTransactionTemplate;
 import example.model.*;
 import example.entity.*;
-import example.mapper.*;
+import example.mapper.main.*;
+import example.mapper.data.*;
 
 /* Warning: you shouldn't use Mapper in Controller, add Manager layer */
 
@@ -21,7 +22,9 @@ import example.mapper.*;
 @RequestMapping("/api")
 public class EmployeeController {
   @Autowired EmployeeMapper employeeMapper;
-  @Autowired SimpleTransactionTemplate stt;
+  @Autowired OpLogMapper    opLogMapper;
+  @Autowired @Qualifier("mainTransactionTemplate")
+  SimpleTransactionTemplate stt;
 
   @ApiMethod(description = "Employee.getAll: Get all employees")
   @RequestMapping(value = "/employees", method = RequestMethod.GET)
@@ -69,7 +72,7 @@ public class EmployeeController {
     else return ApiResult.notFound();
   }
 
-  Long insertEmployeeInTrans(Employee e) throws Exception {
+  long insertEmployeeInTrans(Employee e) throws Exception {
     employeeMapper.add(e);
     if (".".equals(e.getName())) {
       throw new Exception("invalid name `.`");
@@ -80,7 +83,7 @@ public class EmployeeController {
   @ApiMethod(description = "Employee.add: Add employee")
   @RequestMapping(value = "/employee", method = RequestMethod.POST,
                   consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
-  ) 
+  )
   public ApiResult add(
     @ApiBodyObject @Valid Employee employee, BindingResult bindingResult) {
     if (bindingResult.hasErrors()) {
@@ -88,7 +91,8 @@ public class EmployeeController {
     }
     long id = stt.call(() -> insertEmployeeInTrans(employee));
     employee.setId(id);
-    
+
+    opLogMapper.add(id, "add");
     return new ApiResult<Employee>(employee);
   }
 

@@ -17,21 +17,23 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import commons.mybatis.*;
 import commons.utils.*;
-import example.mapper.*;
+import example.mapper.main.*;
+
+/* only for demo */
 
 @Configuration
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @EnableTransactionManagement
 public class SmartDaoConfig {
   @Autowired Environment env;
-  
+
   @Bean(name = "onlyOneDataSource")
   public DataSource dataSource() {
     DruidDataSource dataSource = new DruidDataSource();
-    dataSource.setDriverClassName(env.getRequiredProperty("jdbc.driver"));
-    dataSource.setUrl(env.getRequiredProperty("jdbc.url"));
-    dataSource.setUsername(env.getRequiredProperty("jdbc.username"));
-    dataSource.setPassword(env.getRequiredProperty("jdbc.password"));
+    dataSource.setDriverClassName(env.getRequiredProperty("main.jdbc.driver"));
+    dataSource.setUrl(env.getRequiredProperty("main.jdbc.url"));
+    dataSource.setUsername(env.getRequiredProperty("main.jdbc.username"));
+    dataSource.setPassword(env.getRequiredProperty("main.jdbc.password"));
     return dataSource;
   }
 
@@ -41,13 +43,13 @@ public class SmartDaoConfig {
     map.put("master", dataSource());
     map.put("slave-1", dataSource());
     map.put("slave-2", dataSource());
-    
+
     SmartDataSource smartDataSource = new SmartDataSource(2);
     smartDataSource.setTargetDataSources(map);
     smartDataSource.setDefaultTargetDataSource(dataSource());
     return smartDataSource;
   }
-    
+
   @Bean(name = "onlyOneSqlSessionFactory")
   public SqlSessionFactory smartSqlSessionFactory() throws Exception {
     SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
@@ -63,7 +65,7 @@ public class SmartDaoConfig {
     configuration.setAggressiveLazyLoading(true);
     configuration.setDefaultStatementTimeout(300);
     configuration.addMapper(EmployeeMapper.class);
-      
+
     MyBatisHelper.registerEnumHandler(
       configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 
@@ -73,8 +75,8 @@ public class SmartDaoConfig {
   @Bean(name = "smartEmployeeMapper")
   public EmployeeMapper smartEmployeeMapper() throws Exception {
     return new SqlSessionTemplate(smartSqlSessionFactory()).getMapper(EmployeeMapper.class);
-  }  
-  
+  }
+
   @Bean(name = "onlyOneTransactionManager")
   public DataSourceTransactionManager smartTransactionManager() {
     return new DataSourceTransactionManager(dataSource());
@@ -83,7 +85,7 @@ public class SmartDaoConfig {
   @Bean
   public Advisor smartDataSourceAdvisor() {
     AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
-    pointcut.setExpression("execution(* " + ProjectInfo.MAPPER_PKG + ".*.*(..))");
+    pointcut.setExpression("execution(* " + ProjectInfo.MAPPER_PKG_MAIN + ".*.*(..))");
     return new DefaultPointcutAdvisor(pointcut, new SmartDataSource.MapperAdvice());
   }
 }

@@ -14,7 +14,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import commons.mybatis.*;
 import commons.utils.*;
-import example.mapper.*;
+import example.mapper.main.*;
 
 @Configuration
 @EnableTransactionManagement
@@ -25,7 +25,7 @@ public class AdvanceDaoConfig {
   @Bean(name = "dbHorizontalPartitionDataSourceList")
   public ArrayList<DataSource> dbHorizontalPartitionDataSourceList() {
     ArrayList<DataSource> list = new ArrayList<>();
-    
+
     for (int i = 0; i < Integer.MAX_VALUE; ++i) {
       String index = String.valueOf(i);
       String dbDriver   = env.getProperty("jdbc.driver." + index);
@@ -36,7 +36,7 @@ public class AdvanceDaoConfig {
       if (dbDriver == null || dbUrl == null || dbUser == null || dbPassword == null) {
         break;
       }
-      
+
       DruidDataSource dataSource = new DruidDataSource();
       dataSource.setDriverClassName(dbDriver);
       dataSource.setUrl(dbUrl);
@@ -53,7 +53,7 @@ public class AdvanceDaoConfig {
   public ArrayList<SqlSessionFactory> dbHorizontalPartitionSqlSessionFactory() throws Exception {
     ArrayList<DataSource> dataSourceList = dbHorizontalPartitionDataSourceList();
     ArrayList<SqlSessionFactory> sqlSessionFactoryList = new ArrayList<>();
-    
+
     for (DataSource dataSource : dataSourceList) {
       SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
       sqlSessionFactoryBean.setDataSource(dataSource);
@@ -68,7 +68,7 @@ public class AdvanceDaoConfig {
       configuration.setAggressiveLazyLoading(true);
       configuration.setDefaultStatementTimeout(300);
       configuration.addMapper(EmployeeMapper.class);
-      
+
       MyBatisHelper.registerEnumHandler(
         configuration.getTypeHandlerRegistry(), EnumValueTypeHandler.class, ProjectInfo.PKG_PREFIX);
 
@@ -87,7 +87,7 @@ public class AdvanceDaoConfig {
       SqlSessionTemplate sqlSessionTemplate = new SqlSessionTemplate(sqlSessionFactory);
       employeeMapperList.add(sqlSessionTemplate.getMapper(EmployeeMapper.class));
     }
-    
+
     return employeeMapperList;
   }
 

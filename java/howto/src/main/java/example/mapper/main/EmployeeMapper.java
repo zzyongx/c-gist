@@ -1,4 +1,4 @@
-package example.mapper;
+package example.mapper.main;
 
 import java.util.*;
 import org.apache.ibatis.annotations.*;
@@ -23,7 +23,7 @@ public interface EmployeeMapper {
         //sql.AND().WHERE("gender = #{gender,typeHandler=example.config.EnumValueTypeHandler}");
         sql.AND().WHERE("gender = #{gender}");
       }
-      
+
       return sql.toString();
     }
 
@@ -61,7 +61,7 @@ public interface EmployeeMapper {
       if (employee.getPhone() != Integer.MIN_VALUE) {
         sql.SET("phone = #{phone}");
       }
-      return sql.WHERE("id = #{id}").toString();        
+      return sql.WHERE("id = #{id}").toString();
     }
   }
 

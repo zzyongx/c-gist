@@ -3,34 +3,23 @@ package example.config;
 import java.util.*;
 import javax.sql.DataSource;
 import com.alibaba.druid.pool.DruidDataSource;
-import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.type.TypeHandler;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.transaction.support.TransactionTemplate;
-import commons.spring.SimpleTransactionTemplate;
 import commons.mybatis.*;
 import commons.utils.*;
 
-@Configuration
-@EnableTransactionManagement
-@MapperScan(basePackages = ProjectInfo.MAPPER_PKG, sqlSessionFactoryRef = "sqlSessionFactory")
-public class DaoConfig {
-  @Autowired Environment env;
+public abstract class DaoConfig {
+  protected Environment env;
 
-  @Bean(initMethod = "init", destroyMethod = "close")
-  public DataSource dataSource() {
+  public DataSource dataSource(String name) {
     DruidDataSource dataSource = new DruidDataSource();
-    dataSource.setDriverClassName(env.getRequiredProperty("jdbc.driver"));
-    dataSource.setUrl(env.getRequiredProperty("jdbc.url"));
-    dataSource.setUsername(env.getRequiredProperty("jdbc.username"));
-    dataSource.setPassword(env.getRequiredProperty("jdbc.password"));
+    dataSource.setDriverClassName(env.getRequiredProperty(name + ".jdbc.driver"));
+    dataSource.setUrl(env.getRequiredProperty(name + ".jdbc.url"));
+    dataSource.setUsername(env.getRequiredProperty(name + ".jdbc.username"));
+    dataSource.setPassword(env.getRequiredProperty(name + ".jdbc.password"));
     dataSource.setMaxActive(20);
     dataSource.setInitialSize(1);
     dataSource.setMaxWait(60000);
@@ -42,10 +31,9 @@ public class DaoConfig {
     return dataSource;
   }
 
-  @Bean
-  public SqlSessionFactory sqlSessionFactory() throws Exception {
+  public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
     SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
-    sqlSessionFactoryBean.setDataSource(dataSource());
+    sqlSessionFactoryBean.setDataSource(dataSource);
 
     TypeHandler[] handlers = new TypeHandler[] {
       new LocalDateTimeTypeHandler(),
@@ -77,15 +65,5 @@ public class DaoConfig {
     configuration.getTypeHandlerRegistry().register(new StringListTypeHandler());
 
     return sqlSessionFactory;
-  }
-
-  @Bean
-  public DataSourceTransactionManager transactionManager() {
-    return new DataSourceTransactionManager(dataSource());
-  }
-
-  @Bean SimpleTransactionTemplate simpleTransactionTemplate() {
-    TransactionTemplate tt = new TransactionTemplate(transactionManager());
-    return new SimpleTransactionTemplate(tt);
   }
 }

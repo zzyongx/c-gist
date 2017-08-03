@@ -13,7 +13,7 @@ import org.springframework.http.*;
 import commons.mybatis.*;
 import example.model.*;
 import example.entity.*;
-import example.mapper.*;
+import example.mapper.main.*;
 import example.config.*;
 
 @Api(name = "employee API",
@@ -53,10 +53,11 @@ public class EmployeeDemoController {
     }
 
     return new ApiResult<List>(SmartDataSource.ContextHolder.getDebug());
-  }  
+  }
 
   /* demonstrate manual wired */
-  @Autowired DataSource dataSource;
+  @Autowired @Qualifier("mainDataSource")
+  DataSource dataSource;
 
   @ApiMethod(description = "Employee.getManual: manual wired")
   @RequestMapping(value = "/employeeManual/{id}", method = RequestMethod.GET)
@@ -66,7 +67,7 @@ public class EmployeeDemoController {
 
     SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
     sqlSessionFactoryBean.setDataSource(dataSource);
-    
+
     SqlSessionFactory sqlSessionFactory = (SqlSessionFactory) sqlSessionFactoryBean.getObject();
     sqlSessionFactory.getConfiguration().addMapper(EmployeeMapper.class);
     sqlSessionFactory.getConfiguration().getTypeHandlerRegistry().register(
@@ -77,5 +78,5 @@ public class EmployeeDemoController {
     Employee employee = employeeMapper.find(id);
     if (employee != null) return new ApiResult<Employee>(employee);
     else return ApiResult.notFound();
-  } 
+  }
 }
