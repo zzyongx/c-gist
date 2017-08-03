@@ -189,6 +189,7 @@
         <version>3.3</version>
         <configuration>
           <compilerArgs>
+            <arg>-Werror</arg>
             <arg>-Xlint:unchecked</arg>
             <arg>-Xlint:deprecation</arg>
           </compilerArgs>

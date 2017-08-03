@@ -32,9 +32,8 @@ sub init_project {
     system("git clone $GITHUB && mv c-gist .c-gist");
   }
 
-  my @dirFrame = ("src", "src/test", "src/test/java",
-                  "src/main", "src/main/resources",
-                  "src/main/java");
+  my @dirFrame = ("src", "src/test", "src/test/java", "src/findbugs",
+                  "src/main", "src/main/resources", "src/main/java");
   foreach my $dir (@dirFrame) {
     mkdir($dir);
   }
@@ -42,15 +41,15 @@ sub init_project {
   my ($pkg, $pkgDir) = pkg_info($opt{groupId}, $opt{artifactId});
   `mkdir -p src/main/java/$pkgDir`;
 
-  @dirFrame = ("entity", "manager", "api", "mapper", "model",
-               "config", "config/servlet");
+  @dirFrame = ("entity", "manager", "api", "mapper", "mapper/main", "mapper/data",
+               "model", "config", "config/servlet");
   foreach my $dir (@dirFrame) {
     mkdir("src/main/java/$pkgDir/$dir");
   }
 
   my $gist = ".c-gist/java/howto";
   copy_pom("$gist/pom.xml", "pom.xml");
-  copy("$gist/findbugs-exclude.xml", "findbugs-exclude.xml");
+  copy("$gist/src/findbugs/exclude.xml", "src/findbugs/exclude.xml");
 
   my $resourceDir = "src/main/resources";
   copy("$gist/$resourceDir/application-dev.properties",
@@ -78,6 +77,8 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java",
             $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
   copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/MainDaoConfig.java", "$dstJavaDir/config/MainDaoConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/DataDaoConfig.java", "$dstJavaDir/config/DataDaoConfig.java");
 
   copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
                     "$dstJavaDir/config/ProjectInfo.java");
@@ -92,8 +93,10 @@ sub init_project {
             "$dstJavaDir/api/EmployeeController.java");
 
   copy_java($pkg, "$srcJavaDir/manager/MemoManager.java", "$dstJavaDir/manager/MemoManager.java");
-  copy_java($pkg, "$srcJavaDir/mapper/EmployeeMapper.java",
-            "$dstJavaDir/mapper/EmployeeMapper.java");
+  copy_java($pkg, "$srcJavaDir/mapper/main/EmployeeMapper.java",
+            "$dstJavaDir/mapper/main/EmployeeMapper.java");
+  copy_java($pkg, "$srcJavaDir/mapper/data/OpLogMapper.java",
+            "$dstJavaDir/mapper/data/OpLogMapper.java");
 
   copy_java($pkg, "$srcJavaDir/entity/Employee.java", "$dstJavaDir/entity/Employee.java");
 
