@@ -1199,7 +1199,7 @@ public class CodeAutoGen {
     builder.append("  table         required format(db.table)\n");
     builder.append("  className     optional default use table's name\n");
     builder.append("  packagePrefix optional format(com.example) default example\n");
-    builder.append("   mapperName    optional default main\n");
+    builder.append("  mapperName    optional default main\n");
     builder.append("  security      optional format(yes|no) default yes. if yes, add @AuthenticationPrincipal\n");
     builder.append("  nontrans      optional format(yes|no) default no. if yes, without @@Transactional\n");
     builder.append("  nopaging      optional format(yes|no) default no. if yes, without Paging\n");
