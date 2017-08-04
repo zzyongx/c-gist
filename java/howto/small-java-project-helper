@@ -140,6 +140,8 @@ sub coding_for_me {
     $opt{packagePrefix} = $pkg;
   }
 
+  my $mapperName = $opt{mapperName} || "main";
+
   my $url = "http://". $opt{httpHost}. "/api/code";
   my $params = join("&", map { $_. "=". $opt{$_} } keys %opt);
   my @targets = ("mapper", "entity");
@@ -157,6 +159,7 @@ sub coding_for_me {
     } else {
       die "auto code error\n$c";
     }
+    $target .= "/$mapperName" if ($target eq "mapper");
     put_file_contents("src/main/java/$pkgDir/$target/$className.java", $c);
   }
 }
@@ -246,7 +249,7 @@ sub help {
   print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
   print {$fh} "\n";
   print {$fh} "coding-for-me use `curl http://localhost/api/code/help` for help\n";
-  print {$fh} "  $0 coding-for-me --dbHostPort=localhost:3306 --dbUser=user --dbPassword=pass --table=order --className=Order\n";
+  print {$fh} "  $0 coding-for-me --dbHostPort=localhost:3306 --dbUser=user --dbPassword=pass --table=order --className=Order --mapperName=main\n";
 
   exit($error ? -1 : 0);
 }

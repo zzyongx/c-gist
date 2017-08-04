@@ -28,6 +28,7 @@ public class CodeAutoGen {
     public String shortTable;
     public String className;
     public String packagePrefix;
+    public String mapperName;
     public boolean security;
     public boolean nontrans;
     public boolean nopaging;
@@ -452,7 +453,7 @@ public class CodeAutoGen {
 
   String genMapperCode(EntitySource source, EntityDesc entityDesc) {
     CodeWriter cw = new CodeWriter();
-    cw.write("package %s.mapper;", source.packagePrefix)
+    cw.write("package %s.mapper.%s;", source.packagePrefix, source.mapperName)
       .newLine()
       .write("import java.util.*;")
       .write("import org.apache.ibatis.annotations.*;")
@@ -884,7 +885,7 @@ public class CodeAutoGen {
   String genManagerInsertFun(EntitySource source, EntityDesc entityDesc) {
     CodeWriter cw = new CodeWriter();
 
-    if (!source.nontrans) cw.write("@Transactional");
+    if (!source.nontrans) cw.write("@Transactional('mainTransactionManager')");
     cw.write("public ApiResult add(%s %s) {", source.entityClazz, source.entityVar);
 
     if (entityDesc.hasUnique) {
@@ -905,7 +906,7 @@ public class CodeAutoGen {
   String genManagerUpdateFun(EntitySource source, EntityDesc entityDesc) {
     CodeWriter cw = new CodeWriter();
 
-    if (!source.nontrans) cw.write("@Transactional");
+    if (!source.nontrans) cw.write("@Transactional('mainTransactionManager')");
     cw.write("public ApiResult update(%s %s) {", source.entityClazz, source.entityVar);
 
     if (entityDesc.hasUnique) {
@@ -929,7 +930,7 @@ public class CodeAutoGen {
     String primaryKey = entityDesc.primaryKeyName;
     CodeWriter cw = new CodeWriter();
 
-    if (!source.nontrans) cw.write("@Transactional");
+    if (!source.nontrans) cw.write("@Transactional('mainTransactionManager')");
     cw.write("public ApiResult delete(%s %s) {", entityDesc.primaryKeyType, primaryKey)
       .write(2, "%s.delete(%s);", source.mapperVar, primaryKey)
       .write(2, "return ApiResult.ok();")
@@ -954,7 +955,7 @@ public class CodeAutoGen {
     }
 
     cw.write("import %s.model.*;", source.packagePrefix)
-      .write("import %s.mapper.*;", source.packagePrefix)
+      .write("import %s.mapper.%s.*;", source.packagePrefix, source.mapperName)
       .write("import %s.entity.*;", source.packagePrefix)
       .newLine();
 
@@ -1001,6 +1002,9 @@ public class CodeAutoGen {
     @ApiQueryParam(name = "packagePrefix", description = "package name prefix")
     @RequestParam Optional<String> packagePrefix,
 
+    @ApiQueryParam(name = "mapperName", description = "mapper name, default main")
+    @RequestParam Optional<String> mapperName,
+
     @ApiQueryParam(name = "security", description = "security flag, default yes")
     @RequestParam Optional<Boolean> security,
 
@@ -1027,6 +1031,7 @@ public class CodeAutoGen {
     source.shortTable    = shortTable;
     source.className     = capitalize(className.orElse(shortTable));
     source.packagePrefix = packagePrefix.orElse("example");
+    source.mapperName    = mapperName.orElse("main");
     source.security      = security.orElse(true);
     source.nontrans      = nontrans.orElse(false);
     source.nopaging      = nopaging.orElse(false);
@@ -1191,9 +1196,10 @@ public class CodeAutoGen {
     builder.append("  dbHostPort    required\n");
     builder.append("  dbUser        required\n");
     builder.append("  dbPassword    required\n");
-    builder.append("  table         optional format(db.table)\n");
+    builder.append("  table         required format(db.table)\n");
     builder.append("  className     optional default use table's name\n");
     builder.append("  packagePrefix optional format(com.example) default example\n");
+    builder.append("   mapperName    optional default main\n");
     builder.append("  security      optional format(yes|no) default yes. if yes, add @AuthenticationPrincipal\n");
     builder.append("  nontrans      optional format(yes|no) default no. if yes, without @@Transactional\n");
     builder.append("  nopaging      optional format(yes|no) default no. if yes, without Paging\n");
