@@ -1,4 +1,4 @@
-package example.mapper.data;
+package example.mapper.big;
 
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.jdbc.SQL;

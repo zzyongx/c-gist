@@ -11,7 +11,7 @@ import commons.spring.SimpleTransactionTemplate;
 import example.model.*;
 import example.entity.*;
 import example.mapper.main.*;
-import example.mapper.data.*;
+import example.mapper.big.*;
 
 /* Warning: you shouldn't use Mapper in Controller, add Manager layer */
 

@@ -30,7 +30,7 @@ public class SmartDaoConfig {
   @Bean(name = "onlyOneDataSource")
   public DataSource dataSource() {
     DruidDataSource dataSource = new DruidDataSource();
-    dataSource.setDriverClassName(env.getRequiredProperty("main.jdbc.driver"));
+    dataSource.setDriverClassName(env.getRequiredProperty("jdbc.driver"));
     dataSource.setUrl(env.getRequiredProperty("main.jdbc.url"));
     dataSource.setUsername(env.getRequiredProperty("main.jdbc.username"));
     dataSource.setPassword(env.getRequiredProperty("main.jdbc.password"));

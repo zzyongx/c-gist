@@ -16,7 +16,7 @@ public abstract class DaoConfig {
 
   public DataSource dataSource(String name) {
     DruidDataSource dataSource = new DruidDataSource();
-    dataSource.setDriverClassName(env.getRequiredProperty(name + ".jdbc.driver"));
+    dataSource.setDriverClassName(env.getRequiredProperty("jdbc.driver"));
     dataSource.setUrl(env.getRequiredProperty(name + ".jdbc.url"));
     dataSource.setUsername(env.getRequiredProperty(name + ".jdbc.username"));
     dataSource.setPassword(env.getRequiredProperty(name + ".jdbc.password"));

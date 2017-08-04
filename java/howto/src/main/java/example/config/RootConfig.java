@@ -25,7 +25,8 @@ import commons.saas.RestNameService;
 @PropertySource(value = "classpath:application-default.properties", ignoreResourceNotFound = true)
 @PropertySource("classpath:application-${spring.profiles.active}.properties")
 public class RootConfig {
-  @Autowired Environment env;
+  @Autowired Environment   env;
+  @Autowired MainDaoConfig mainDaoConfig;
 
   @Bean
   public CountLogger countLogger() {
@@ -120,6 +121,8 @@ public class RootConfig {
       env.getProperty("rest.inner", Boolean.class, false),
       env.getProperty("rest.anonymous", ""));
     rms.setCookiePrefix(env.getProperty("login.cookieprefix", ""));
+    rms.setApiAuthDb(mainDaoConfig.mainDataSource(), env.getProperty("login.apiauth.sql"));
+    rms.setPermException(env.getProperty("login.perm.exception"));
     return rms;
   }
 }

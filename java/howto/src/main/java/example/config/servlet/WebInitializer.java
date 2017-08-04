@@ -11,7 +11,7 @@ public class WebInitializer extends AbstractAnnotationConfigDispatcherServletIni
   @Override
   protected Class<?>[] getRootConfigClasses() {
     return new Class<?>[] {
-      RootConfig.class, MainDaoConfig.class, DataDaoConfig.class, SecurityConfig.class, AdvanceDaoConfig.class, SmartDaoConfig.class
+      RootConfig.class, MainDaoConfig.class, BigDaoConfig.class, SecurityConfig.class, AdvanceDaoConfig.class, SmartDaoConfig.class
     };
   }
 

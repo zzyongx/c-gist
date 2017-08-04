@@ -41,7 +41,7 @@ sub init_project {
   my ($pkg, $pkgDir) = pkg_info($opt{groupId}, $opt{artifactId});
   `mkdir -p src/main/java/$pkgDir`;
 
-  @dirFrame = ("entity", "manager", "api", "mapper", "mapper/main", "mapper/data",
+  @dirFrame = ("entity", "manager", "api", "mapper", "mapper/main", "mapper/big",
                "model", "config", "config/servlet");
   foreach my $dir (@dirFrame) {
     mkdir("src/main/java/$pkgDir/$dir");
@@ -78,7 +78,7 @@ sub init_project {
             $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
   copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
   copy_java($pkg, "$srcJavaDir/config/MainDaoConfig.java", "$dstJavaDir/config/MainDaoConfig.java");
-  copy_java($pkg, "$srcJavaDir/config/DataDaoConfig.java", "$dstJavaDir/config/DataDaoConfig.java");
+  copy_java($pkg, "$srcJavaDir/config/BigDaoConfig.java", "$dstJavaDir/config/BigDaoConfig.java");
 
   copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
                     "$dstJavaDir/config/ProjectInfo.java");
@@ -95,8 +95,8 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/manager/MemoManager.java", "$dstJavaDir/manager/MemoManager.java");
   copy_java($pkg, "$srcJavaDir/mapper/main/EmployeeMapper.java",
             "$dstJavaDir/mapper/main/EmployeeMapper.java");
-  copy_java($pkg, "$srcJavaDir/mapper/data/OpLogMapper.java",
-            "$dstJavaDir/mapper/data/OpLogMapper.java");
+  copy_java($pkg, "$srcJavaDir/mapper/big/OpLogMapper.java",
+            "$dstJavaDir/mapper/big/OpLogMapper.java");
 
   copy_java($pkg, "$srcJavaDir/entity/Employee.java", "$dstJavaDir/entity/Employee.java");
 

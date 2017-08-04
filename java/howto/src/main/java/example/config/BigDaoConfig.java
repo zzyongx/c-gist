@@ -13,31 +13,31 @@ import commons.spring.SimpleTransactionTemplate;
 
 @Configuration
 @EnableTransactionManagement
-@MapperScan(basePackages = ProjectInfo.MAPPER_PKG_DATA, sqlSessionFactoryRef = "dataSqlSessionFactory")
-public class DataDaoConfig extends DaoConfig {
+@MapperScan(basePackages = ProjectInfo.MAPPER_PKG_BIG, sqlSessionFactoryRef = "bigSqlSessionFactory")
+public class BigDaoConfig extends DaoConfig {
   @Autowired
-  public DataDaoConfig(Environment env) {
+  public BigDaoConfig(Environment env) {
     this.env = env;
   }
 
   @Bean(initMethod = "init", destroyMethod = "close")
-  public DataSource dataDataSource() {
-    return dataSource("data");
+  public DataSource bigDataSource() {
+    return dataSource("big");
   }
 
   @Bean
-  public SqlSessionFactory dataSqlSessionFactory() throws Exception {
-    return sqlSessionFactory(dataDataSource());
+  public SqlSessionFactory bigSqlSessionFactory() throws Exception {
+    return sqlSessionFactory(bigDataSource());
   }
 
   @Bean
-  public DataSourceTransactionManager dataTransactionManager() {
-    return new DataSourceTransactionManager(dataDataSource());
+  public DataSourceTransactionManager bigTransactionManager() {
+    return new DataSourceTransactionManager(bigDataSource());
   }
 
   @Bean
-  public SimpleTransactionTemplate dataTransactionTemplate() {
-    TransactionTemplate tt = new TransactionTemplate(dataTransactionManager());
+  public SimpleTransactionTemplate bigTransactionTemplate() {
+    TransactionTemplate tt = new TransactionTemplate(bigTransactionManager());
     return new SimpleTransactionTemplate(tt);
   }
 }
