@@ -17,7 +17,7 @@ import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.dao.DataAccessException;
-import example.model.*;
+import commons.utils.*;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -50,35 +50,35 @@ public class GlobalExceptionHandler {
   @ResponseBody
   public ApiResult internalServerError(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
-    return new ApiResult(Errno.INTERNAL_ERROR, e.toString());
+    return ApiResult.internalError(e.toString());
   }
 
   @ExceptionHandler(URISyntaxException.class)
   @ResponseBody
   public ApiResult uriSyntaxException(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
-    return new ApiResult(Errno.BAD_REQUEST, e.toString());
+    return ApiResult.badRequest(e.toString());
   }
 
   @ExceptionHandler(DataAccessException.class)
   @ResponseBody
   public ApiResult dataAccessExcption(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
-    return new ApiResult(Errno.INTERNAL_ERROR, "interal db error");
+    return ApiResult.internalError("interal db error");
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
   @ResponseBody
   public ApiResult httpMessageNotReadableException(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
-    return new ApiResult(Errno.BAD_REQUEST, e.toString());
+    return ApiResult.badRequest(e.toString());
   }
 
   @ExceptionHandler(ServletRequestBindingException.class)
   @ResponseBody
   public ApiResult servletRequestBindingException(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
-    return new ApiResult(Errno.BAD_REQUEST, e.toString());
+    return ApiResult.badRequest(e.toString());
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
@@ -88,7 +88,7 @@ public class GlobalExceptionHandler {
       .map(ConstraintViolation::getMessage).collect(Collectors.toList());
 
     logger.error("{} throws {}", getContext(), errors);
-    return new ApiResult<List>(Errno.BAD_REQUEST, errors);
+    return new ApiResult<List>(BaseErrno.BAD_REQUEST, errors);
   }
 
   @ExceptionHandler(ApiResult.AsException.class)
@@ -97,31 +97,17 @@ public class GlobalExceptionHandler {
     return e.get();
   }
 
-  @ExceptionHandler(Errno.BadRequestException.class)
-  @ResponseBody
-  public ApiResult badRequestException(Exception e) {
-    logger.error("{} throws {}", getContext(), e);
-    return new ApiResult(Errno.BAD_REQUEST, e.toString());
-  }
-
-  @ExceptionHandler(Errno.InternalErrorException.class)
-  @ResponseBody
-  public ApiResult internalErrorException(Exception e) {
-    logger.error("{} throws {}", getContext(), e);
-    return new ApiResult(Errno.INTERNAL_ERROR, e.toString());
-  }
-
   @ExceptionHandler(TypeMismatchException.class)
   @ResponseBody
   public ApiResult typeMismatchException(Exception e) {
-    logger.error("{} throws {}", getContext(), e);
-    return new ApiResult(Errno.BAD_REQUEST, e.toString());
+    logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
+    return ApiResult.badRequest(e.toString());
   }
 
   @ExceptionHandler(ResourceAccessException.class)
   @ResponseBody
   public ApiResult resourceAccessException(Exception e) {
-    logger.error("{} throws {}", getContext(), e);
-    return new ApiResult(Errno.INTERNAL_ERROR, e.getMessage());
+    logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
+    return ApiResult.internalError(e.getMessage());
   }
 }

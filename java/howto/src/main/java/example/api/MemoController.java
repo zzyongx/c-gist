@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import commons.spring.RedisRememberMeService;
-import example.model.*;
+import commons.utils.*;
 import example.manager.*;
 
 @Api(
@@ -32,12 +32,12 @@ public class MemoController {
     @ApiQueryParam(name = "memo", description = "memo")
     @RequestParam String memo) {
     return memoManager.add(user.getId(), memo);
-  }  
+  }
 
   @ApiMethod(description = "update a memo by memoId")
   @RequestMapping(value = "/memo/{memoId}", method = RequestMethod.PUT)
   public ApiResult update(
-    @AuthenticationPrincipal RedisRememberMeService.User user,    
+    @AuthenticationPrincipal RedisRememberMeService.User user,
     @ApiPathParam(name = "memoId", description = "the memo's id", format = "digit")
     @PathVariable String memoId,
     @ApiQueryParam(name = "memo", description = "memo")
@@ -48,7 +48,7 @@ public class MemoController {
   @ApiMethod(description = "delete one memo by memoId")
   @RequestMapping(value = "/memo/{memoId}", method = RequestMethod.DELETE)
   public ApiResult delete(
-    @AuthenticationPrincipal RedisRememberMeService.User user,    
+    @AuthenticationPrincipal RedisRememberMeService.User user,
     @ApiPathParam(name = "memoId", description = "the memo's id", format = "digit")
     @PathVariable String memoId) {
     return memoManager.delete(user.getId(), memoId);

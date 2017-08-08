@@ -4,8 +4,7 @@ import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import redis.clients.jedis.*;
-import commons.utils.MapHelper;
-import example.model.*;
+import commons.utils.*;
 
 @Component
 public class MemoManager {

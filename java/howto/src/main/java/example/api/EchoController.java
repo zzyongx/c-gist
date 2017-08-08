@@ -12,26 +12,25 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.validation.*;
 import org.springframework.web.bind.annotation.*;
-import example.model.*;
 import example.config.*;
 
 @RestController
 @RequestMapping("/api")
 public class EchoController {
-  
+
   public static class Profile {
     @NotBlank(message = "name is required")
     public String name;
-    
+
     @Pattern(regexp = "\\d{11,15}", message = "phone is required")
     public String phone;
-    
+
     public List<String> favoriteColor;
-    
+
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonSerialize(using = LocalDateTimeJsonSerializer.class)
     public LocalDateTime birthday;
-    
+
     public void setName(String name) {
       this.name = name;
     }
@@ -45,7 +44,7 @@ public class EchoController {
       this.birthday = birthday;
     }
   }
-  
+
   // OptionalLong is not support now, use Optional<Long> instead of
   // curl dev:8180/api/power/5
   // curl dev:8180/api/power/5/3
@@ -84,7 +83,7 @@ public class EchoController {
     throws IOException {
     InputStream input = request.getInputStream();
     OutputStream output = response.getOutputStream();
-    
+
     byte[] buffer = new byte[512];
     int n;
     while ((n = input.read(buffer)) > 0) {
@@ -92,7 +91,7 @@ public class EchoController {
     }
   }
 
-  // curl -X PUT dev:8180/api/profile -d '{"name": "zzyong", "phone": 12345678901}' -H "Content-Type: application/json"  
+  // curl -X PUT dev:8180/api/profile -d '{"name": "zzyong", "phone": 12345678901}' -H "Content-Type: application/json"
   @RequestMapping(value = "/profile", method = RequestMethod.PUT, consumes = "application/json")
   public String submitProfileJson(@RequestBody String json) {
     return json;
@@ -109,7 +108,7 @@ public class EchoController {
       for(FieldError error : bindingResult.getFieldErrors()){
         map.put(error.getField(), error.getDefaultMessage());
       }
-      return new ResponseEntity<Map>(map, HttpStatus.BAD_REQUEST);      
+      return new ResponseEntity<Map>(map, HttpStatus.BAD_REQUEST);
     } else {
       return new ResponseEntity<Profile>(profile, HttpStatus.OK);
     }

@@ -5,7 +5,7 @@ import org.jsondoc.core.annotation.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
-import example.model.*;
+import commons.utils.*;
 
 @Api(
   name = "RestTemplate",
@@ -38,7 +38,7 @@ public class RestClient {
   private static final String VERSION_URI   = HOST + "/api/restserver/version";
   private static final String COLOR_URI     = HOST + "/api/restserver/color";
   private static final String COLOR_URI_TPL = HOST + "/api/restserver/color/{colors}";
-  
+
   @ApiMethod(description = "get version")
   @RequestMapping(value = "/version", method = RequestMethod.GET)
   public ApiResult version() {
@@ -93,7 +93,7 @@ public class RestClient {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(new MediaType("application", "objectlist"));
     HttpEntity<String> entity = new HttpEntity<String>(colors, headers);
-    
+
     restTemplate.exchange(COLOR_URI, HttpMethod.PUT, entity, Void.class);
     return ApiResult.ok();
   }

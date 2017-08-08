@@ -11,7 +11,7 @@ import org.springframework.validation.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import commons.mybatis.*;
-import example.model.*;
+import commons.utils.*;
 import example.entity.*;
 import example.mapper.main.*;
 import example.config.*;

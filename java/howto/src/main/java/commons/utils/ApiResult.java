@@ -1,4 +1,4 @@
-package example.model;
+package commons.utils;
 
 import java.util.*;
 import javax.servlet.http.*;
@@ -22,11 +22,11 @@ public class ApiResult<Data> {
   Data data;
 
   public ApiResult() {
-    this(Errno.OK);
+    this(BaseErrno.OK);
   }
 
   public ApiResult(int code) {
-    this(code, Errno.getMessage(code));
+    this(code, BaseErrno.getMessage(code));
   }
 
   private void setErrorHint() {
@@ -50,7 +50,7 @@ public class ApiResult<Data> {
   }
 
   public static ApiResult wrap(ApiResult rc) {
-    if (rc.code != Errno.OK) rc.setErrorHint();
+    if (rc.code != BaseErrno.OK) rc.setErrorHint();
     else rc.clearErrorHint();
     return rc;
   }
@@ -60,11 +60,11 @@ public class ApiResult<Data> {
   }
 
   public ApiResult(Data data) {
-    this(Errno.OK, Errno.getMessage(Errno.OK), data);
+    this(BaseErrno.OK, BaseErrno.getMessage(BaseErrno.OK), data);
   }
 
   public ApiResult(int code, Data data) {
-    this(code, Errno.getMessage(code), data);
+    this(code, BaseErrno.getMessage(code), data);
   }
 
   public static class AsException extends RuntimeException {
@@ -86,39 +86,39 @@ public class ApiResult<Data> {
   }
 
   public static ApiResult badRequest(String msg) {
-    return new ApiResult(Errno.BAD_REQUEST, msg);
+    return new ApiResult(BaseErrno.BAD_REQUEST, msg);
   }
 
   public static ApiResult unAuthorized() {
-    return new ApiResult(Errno.UNAUTHORIZED);
+    return new ApiResult(BaseErrno.UNAUTHORIZED);
   }
 
   public static ApiResult forbidden() {
-    return new ApiResult(Errno.FORBIDDEN);
+    return new ApiResult(BaseErrno.FORBIDDEN);
   }
 
   public static ApiResult notFound() {
-    return new ApiResult(Errno.NOT_FOUND);
+    return new ApiResult(BaseErrno.NOT_FOUND);
+  }
+
+  public static ApiResult notFound(String msg) {
+    return new ApiResult(BaseErrno.NOT_FOUND, msg);
   }
 
   public static ApiResult notAccept(String msg) {
-    return new ApiResult(Errno.NOT_ACCEPT, msg);
+    return new ApiResult(BaseErrno.NOT_ACCEPT, msg);
   }
 
   public static ApiResult internalError(String msg) {
-    return new ApiResult(Errno.INTERNAL_ERROR, msg);
+    return new ApiResult(BaseErrno.INTERNAL_ERROR, msg);
   }
 
   public static ApiResult notImplement() {
-    return new ApiResult(Errno.NOT_IMPLEMENT);
+    return new ApiResult(BaseErrno.NOT_IMPLEMENT);
   }
 
   public static ApiResult serviceUnavailable(String msg) {
-    return new ApiResult(Errno.SERVICE_UNAVAILABLE, msg);
-  }
-
-  public static Errno.BadRequestException badRequestException() {
-    return new Errno.BadRequestException();
+    return new ApiResult(BaseErrno.SERVICE_UNAVAILABLE, msg);
   }
 
   public static ApiResult bindingResult(BindingResult bindingResult) {
@@ -126,7 +126,7 @@ public class ApiResult<Data> {
     for(FieldError error : bindingResult.getFieldErrors()){
       map.put(error.getField(), error.getDefaultMessage());
     }
-    return new ApiResult<Map>(Errno.BAD_REQUEST, map);
+    return new ApiResult<Map>(BaseErrno.BAD_REQUEST, map);
   }
 
   public ApiResult(int code, String message, Data data) {
@@ -134,13 +134,13 @@ public class ApiResult<Data> {
     this.message = message;
     this.data = data;
 
-    if (this.code != Errno.OK) setErrorHint();
+    if (this.code != BaseErrno.OK) setErrorHint();
     else clearErrorHint();
   }
 
   @JsonIgnore
   public boolean isOk() {
-    return this.code == Errno.OK;
+    return this.code == BaseErrno.OK;
   }
 
   public int getCode() {
