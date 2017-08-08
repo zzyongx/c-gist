@@ -786,7 +786,7 @@ public class CodeAutoGen {
       cw.write("import org.springframework.security.core.annotation.AuthenticationPrincipal;");
       cw.write("import commons.spring.RedisRememberMeService;");
     }
-    cw.write("import %s.model.*;", source.packagePrefix);
+    cw.write("import commons.utils.*;");
     cw.write("import %s.entity.*;", source.packagePrefix);
     cw.write("import %s.manager.*;", source.packagePrefix);
     cw.newLine();
@@ -954,7 +954,7 @@ public class CodeAutoGen {
       cw.write("import commons.mybatis.Paging;");
     }
 
-    cw.write("import %s.model.*;", source.packagePrefix)
+    cw.write("import commons.utils.*;")
       .write("import %s.mapper.%s.*;", source.packagePrefix, source.mapperName)
       .write("import %s.entity.*;", source.packagePrefix)
       .newLine();

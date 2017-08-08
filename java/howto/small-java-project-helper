@@ -83,7 +83,6 @@ sub init_project {
   copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
                     "$dstJavaDir/config/ProjectInfo.java");
 
-  copy_java($pkg, "$srcJavaDir/model/ApiResult.java", "$dstJavaDir/model/ApiResult.java");
   copy_java($pkg, "$srcJavaDir/model/Errno.java", "$dstJavaDir/model/Errno.java");
 
   copy_java($pkg, "$srcJavaDir/api/MemoController.java", "$dstJavaDir/api/MemoController.java");
