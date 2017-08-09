@@ -76,6 +76,8 @@ class BDD {
     http = [:]
     json = [:]
     string = null
+    resp = null
+    respBody = null
   }
 
   def config(Map config) {
@@ -190,9 +192,9 @@ class BDD {
         }
       }
 
-      response.failure = { resp ->
+      response.failure = { resp, body ->
         this.resp = resp
-        this.respBody = null
+        this.respBody = body.text
       }
     }
     if (r.debug) println("DEBUG RESPONSE: ${respBody}")
