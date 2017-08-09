@@ -86,8 +86,6 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/model/Errno.java", "$dstJavaDir/model/Errno.java");
 
   copy_java($pkg, "$srcJavaDir/api/MemoController.java", "$dstJavaDir/api/MemoController.java");
-  copy_java($pkg, "$srcJavaDir/api/GlobalExceptionHandler.java",
-            "$dstJavaDir/api/GlobalExceptionHandler.java");
   copy_java($pkg, "$srcJavaDir/api/EmployeeController.java",
             "$dstJavaDir/api/EmployeeController.java");
 

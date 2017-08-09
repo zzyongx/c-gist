@@ -97,6 +97,10 @@ public class ApiResult<Data> {
     return new ApiResult(BaseErrno.FORBIDDEN);
   }
 
+  public static ApiResult forbidden(String msg) {
+    return new ApiResult(BaseErrno.FORBIDDEN, msg);
+  }
+
   public static ApiResult notFound() {
     return new ApiResult(BaseErrno.NOT_FOUND);
   }

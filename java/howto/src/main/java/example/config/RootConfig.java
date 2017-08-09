@@ -21,7 +21,7 @@ import commons.saas.RestNameService;
 
 @Configuration
 @EnableScheduling
-@ComponentScan({ProjectInfo.PKG_PREFIX + ".api", ProjectInfo.PKG_PREFIX + ".manager"})
+@ComponentScan({"commons.spring.controller", ProjectInfo.PKG_PREFIX + ".api", ProjectInfo.PKG_PREFIX + ".manager"})
 @PropertySource(value = "classpath:application-default.properties", ignoreResourceNotFound = true)
 @PropertySource("classpath:application-${spring.profiles.active}.properties")
 public class RootConfig {

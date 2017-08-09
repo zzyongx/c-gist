@@ -1,4 +1,4 @@
-package example.api;
+package commons.spring.controller;
 
 import java.net.URISyntaxException;
 import java.util.List;
