@@ -17,6 +17,7 @@ import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.CannotAcquireLockException;
 import commons.utils.*;
 
 @ControllerAdvice
@@ -65,6 +66,13 @@ public class GlobalExceptionHandler {
   public ApiResult dataAccessExcption(Exception e) {
     logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
     return ApiResult.internalError("interal db error");
+  }
+
+  @ExceptionHandler(CannotAcquireLockException.class)
+  @ResponseBody
+  public ApiResult cannotAcquireLockException(Exception e) {
+    logger.error("{} throws {}", getContext(), Throwables.getStackTraceAsString(e));
+    return ApiResult.internalError(e.getMessage());
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
