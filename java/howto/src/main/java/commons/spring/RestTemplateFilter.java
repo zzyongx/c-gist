@@ -68,7 +68,10 @@ public class RestTemplateFilter implements ClientHttpRequestInterceptor {
 
     if (!logger.isDebugEnabled()) return execution.execute(request, body);
 
+    long start = System.currentTimeMillis();
     ClientHttpResponse response = execution.execute(request, body);
+    long end = System.currentTimeMillis();
+
     byte[] bytes = StreamUtils.copyToByteArray(response.getBody());
 
     ClientHttpResponse proxy = (ClientHttpResponse) Proxy.newProxyInstance(
@@ -79,8 +82,8 @@ public class RestTemplateFilter implements ClientHttpRequestInterceptor {
     String input = body == null || body.length == 0 ? "-" : new String(body);
     String output = bytes == null || bytes.length == 0 ? "-" : new String(bytes);
 
-    logger.debug("{} {} {} {} {}", request.getMethod(), request.getURI(), input,
-                response.getRawStatusCode(), output);
+    logger.debug("{} {} {} {} {} {}", end - start, request.getMethod(), request.getURI(), input,
+                 response.getRawStatusCode(), output);
     return proxy;
   }
 }
