@@ -136,8 +136,9 @@ class BDD {
     reqUri.query = r.query
 
     if (r.body instanceof String ||
-        r.body instanceof GString ||
-        r.body instanceof byte[]) {
+        r.body instanceof GString) {
+      r.requestContentType = "text/plain"
+    } else if (r.body instanceof byte[]) {
       r.requestContentType = 'application/octet-stream'
     } else if (r.body && reqUri.query) {
       reqUri.query << r.body
