@@ -33,6 +33,7 @@ public class RestServer {
   @ApiMethod(description = "get version info")
   @RequestMapping(value = "/version", method = RequestMethod.GET)
   public @ResponseBody String version() {
+    // try {Thread.sleep(30 * 1000);} catch (Exception e) {}
     return versionInfo;
   }
 

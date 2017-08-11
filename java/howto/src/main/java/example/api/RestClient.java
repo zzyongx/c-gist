@@ -2,6 +2,7 @@ package example.api;
 
 import java.util.*;
 import org.jsondoc.core.annotation.*;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
@@ -33,8 +34,9 @@ public class RestClient {
     }
   }
 
-  private RestTemplate restTemplate = new RestTemplate();
-  private static final String HOST = "http://127.0.0.1:8888/";
+  @Autowired RestTemplate restTemplate;
+
+  private static final String HOST = "http://127.0.0.1/";
   private static final String VERSION_URI   = HOST + "/api/restserver/version";
   private static final String COLOR_URI     = HOST + "/api/restserver/color";
   private static final String COLOR_URI_TPL = HOST + "/api/restserver/color/{colors}";

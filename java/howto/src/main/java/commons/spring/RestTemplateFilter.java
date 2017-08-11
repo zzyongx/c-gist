@@ -69,21 +69,29 @@ public class RestTemplateFilter implements ClientHttpRequestInterceptor {
     if (!logger.isDebugEnabled()) return execution.execute(request, body);
 
     long start = System.currentTimeMillis();
-    ClientHttpResponse response = execution.execute(request, body);
-    long end = System.currentTimeMillis();
-
-    byte[] bytes = StreamUtils.copyToByteArray(response.getBody());
-
-    ClientHttpResponse proxy = (ClientHttpResponse) Proxy.newProxyInstance(
-      RestTemplateFilter.class.getClassLoader(),
-      new Class[] { ClientHttpResponse.class },
-      new ClientHttpResponseInvocationHandler(response, bytes));
-
     String input = body == null || body.length == 0 ? "-" : new String(body);
-    String output = bytes == null || bytes.length == 0 ? "-" : new String(bytes);
+    int httpCode = 0;
+    String output = "";
 
-    logger.debug("{} {} {} {} {} {}", end - start, request.getMethod(), request.getURI(), input,
-                 response.getRawStatusCode(), output);
-    return proxy;
+    try {
+      ClientHttpResponse response = execution.execute(request, body);
+      byte[] bytes = StreamUtils.copyToByteArray(response.getBody());
+
+      ClientHttpResponse proxy = (ClientHttpResponse) Proxy.newProxyInstance(
+        RestTemplateFilter.class.getClassLoader(),
+        new Class[] { ClientHttpResponse.class },
+        new ClientHttpResponseInvocationHandler(response, bytes));
+
+      httpCode = response.getRawStatusCode();
+      output = bytes == null || bytes.length == 0 ? "-" : new String(bytes);
+      return proxy;
+    } catch (Exception e) {
+      httpCode = 0;
+      output = e.toString();
+      throw e;
+    } finally {
+      long end = System.currentTimeMillis();
+      logger.debug("{} {} {} {} {} {}", end - start, request.getMethod(), request.getURI(), input, httpCode, output);
+    }
   }
 }
