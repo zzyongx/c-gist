@@ -320,6 +320,15 @@ public class RedisRememberMeService implements RememberMeServices {
       return false;
     }
 
+    public boolean canSu(long permId) {
+      if (perms == null) return false;
+      for (UserPerm perm : perms) {
+        long myPermId = perm.getPermId();
+        if (myPermId > 0 && myPermId < 100 && myPermId <= permId) return true;
+      }
+      return false;
+    }
+
     public List<String> getEntitys() {
       List<String> entitys = new ArrayList<>();
       if (perms == null) return entitys;
@@ -458,6 +467,8 @@ public class RedisRememberMeService implements RememberMeServices {
   private static boolean configRevokePermStrict = true;
   private static Map<Long, List<Tuple2<Boolean, Long>>> configPermException = new HashMap<>();
 
+  private static int configSuPermId = -1;
+
   private static final User internalUser = User.internal();
   private static List<GrantedAuthority> internalGrantedAuths = Arrays.asList(
     new SimpleGrantedAuthority("ROLE_SYSINTERNAL")
@@ -536,6 +547,10 @@ public class RedisRememberMeService implements RememberMeServices {
 
   public void setRevokePermStrict(boolean strict) {
     this.configRevokePermStrict = strict;
+  }
+
+  public void setSuPermId(int suPermId) {
+    this.configSuPermId = suPermId;
   }
 
   public void setPermException(String permException) {
@@ -669,7 +684,21 @@ public class RedisRememberMeService implements RememberMeServices {
     return true;
   }
 
-  private User checkToken(String token) {
+  private User suUser(User user, String suId) {
+    if (suId != null && !suId.isEmpty() && user != null) {
+      if (configSuPermId > 0 && user.canSu(configSuPermId)) {
+        try (Jedis c = jedisPool.getResource()) {
+          CacheEntity cacheEntity = CacheEntity.buildFromString(c.get(cacheKey(suId)));
+          return cacheEntity == null ? null : cacheEntity.toUser();
+        }
+      } else {
+        return null;
+      }
+    }
+    return user;
+  }
+
+  private User checkToken(String token, String suId) {
     if (token == null) return null;
 
     String parts[] = token.split(":", 2);
@@ -694,7 +723,7 @@ public class RedisRememberMeService implements RememberMeServices {
       }
     }
 
-    return cacheEntity.toUser();
+    return suUser(cacheEntity.toUser(), suId);
   }
 
   private Authentication autoLoginByTokenPool(HttpServletRequest request) {
@@ -720,6 +749,7 @@ public class RedisRememberMeService implements RememberMeServices {
   private Authentication autoLoginByRedisPool(HttpServletRequest request) {
     String token = null;
     String openId = null;
+    String suId = null;
 
     Cookie[] cookies = request.getCookies();
     if (cookies != null) {
@@ -728,15 +758,16 @@ public class RedisRememberMeService implements RememberMeServices {
           token = cookie.getValue();
         } else if (cookie.getName().equals(cookieKey("openId"))) {
           openId = cookie.getValue();
+        } else if (cookie.getName().equals(cookieKey("suId"))) {
+          suId = cookie.getValue();
         }
       }
     }
 
-    if (token == null) {
-      token = request.getHeader("authorization");
-    }
+    if (token == null) token = request.getHeader("authorization");
+    if (suId == null) suId = request.getParameter("__su");
 
-    User user = checkToken(token);
+    User user = checkToken(token, suId);
     if (user == null) return null;
 
     if (openId != null) user.setOpenId(openId);
