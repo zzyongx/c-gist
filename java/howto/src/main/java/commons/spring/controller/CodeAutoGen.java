@@ -1,4 +1,4 @@
-package commons.spring;
+package commons.spring.controller;
 
 import java.io.*;
 import java.nio.charset.*;
