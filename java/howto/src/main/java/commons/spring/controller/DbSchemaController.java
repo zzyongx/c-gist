@@ -1,8 +1,9 @@
-package commons.spring;
+package commons.spring.controller;
 
 import java.sql.*;
 import java.util.*;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
@@ -34,7 +35,7 @@ public class DbSchemaController {
     public void addField(String field) {
       fields.add(field);
     }
-    
+
     public void setUniq(boolean uniq) {
       this.uniq = uniq;
     }
@@ -63,7 +64,7 @@ public class DbSchemaController {
   static class TableSchema {
     Map<String, TableField> fields = new HashMap<>();
     List<TableIndex> indexs = new ArrayList<>();
-    
+
     public void addField(String name, TableField field) {
       if (field.def == null) field.def = "";
       fields.put(name, field);
@@ -79,38 +80,30 @@ public class DbSchemaController {
       return indexs;
     }
   }
-  
-  List<DbInfo> dbs = new ArrayList<>();
 
-  public DbSchemaController(Environment env) {
-    String defUserName = env.getProperty("jdbc.username");
-    String defPassword = env.getProperty("jdbc.password");
-    
-    for (String suffix : EnvHelper.getPropertyNameSuffixWithPrefix(env, "jdbc.url")) {
+  @Autowired Environment env;
+
+  private List<DbInfo> getDbs(String name) {
+    List<DbInfo> dbs = new ArrayList<>();
+
+    String defUserName = env.getProperty(name == null ? "jdbc.username" : name + ".jdbc.username");
+    String defPassword = env.getProperty(name == null ? "jdbc.password" : name + ".jdbc.password");
+
+    for (String suffix : EnvHelper.getPropertyNameSuffixWithPrefix(env, name == null ? "jdbc.url" : name + ".jdbc.url")) {
       DbInfo db = new DbInfo();
-      
+
       if (suffix.isEmpty()) {
-        db.url = env.getProperty("jdbc.url");
+        db.url = env.getProperty(name == null ? "jdbc.url" : name + ".jdbc.url");
       } else {
-        db.url = env.getProperty("jdbc.url." + suffix);
-        db.username = env.getProperty("jdbc.username." + suffix);
-        db.password = env.getProperty("jdbc.password." + suffix);
+        db.url = env.getProperty(name == null ? "jdbc.url." + suffix : name + ".jdbc.url." + suffix);
+        db.username = env.getProperty(name == null ? "jdbc.username." + suffix : name + ".jdbc.username." + suffix);
+        db.password = env.getProperty(name == null ? "jdbc.password." + suffix : name + ".jdbc.password." + suffix);
       }
 
       if (db.username == null) db.username = defUserName;
       if (db.password == null) db.password = defPassword;
 
       if (db.url != null) dbs.add(db);
-    }
-  }
-
-  List<String> showDatabases(JdbcTemplate jdbc) {
-    List<String> dbs = new ArrayList<>();
-    for (Map<String, Object> map : jdbc.queryForList("SHOW DATABASES")) {
-      String db = (String) map.get("Database");
-      if (!db.equals("test") && !db.equals("information_schema")) {
-        dbs.add(db);
-      }
     }
     return dbs;
   }
@@ -126,7 +119,7 @@ public class DbSchemaController {
 
   TableSchema showTableSchema(JdbcTemplate jdbc, String db, String table) {
     String fullTableName = db + "." + table;
-    TableSchema schema = new TableSchema();    
+    TableSchema schema = new TableSchema();
 
     for (Map<String, Object> map : jdbc.queryForList("DESC " + fullTableName)) {
       TableField field = new TableField();
@@ -143,12 +136,12 @@ public class DbSchemaController {
     for (Map<String, Object> map : jdbc.queryForList("SHOW INDEX IN " + fullTableName)) {
       String name = (String) map.get("Key_name");
       String field = (String) map.get("Column_name");
-      
+
       if (name.equals(lastName)) {
         index.addField(field);
       } else {
         if (index != null) schema.addIndex(index);
-        
+
         index = new TableIndex();
         index.addField(field);
 
@@ -161,60 +154,64 @@ public class DbSchemaController {
 
     return schema;
   }
-  
-  @RequestMapping(value = "/dbschema", method = RequestMethod.GET)
-  public Map<String, Object> getDbSchema() {
-    Map<String, Object> dbMap = new HashMap<>();
-    
-    for (DbInfo info : dbs) {
+
+  private Map<String, Object> getDbSchema(String configName, String dbName) {
+    Map<String, Object> tableMap = new HashMap<>();
+
+    for (DbInfo info : getDbs(configName)) {
       SingleConnectionDataSource c = new SingleConnectionDataSource(
         info.url, info.username, info.password, false);
+
+      if (dbName == null) {
+        int slashIndex = info.url.lastIndexOf('/');
+        if (slashIndex > 0 && slashIndex+1 != info.url.length()) {
+          int questionIndex = info.url.lastIndexOf('?');
+          dbName  = slashIndex < questionIndex ? info.url.substring(slashIndex+1, questionIndex) :
+            info.url.substring(slashIndex+1);
+        } else {
+          continue;
+        }
+      }
+
       try {
         JdbcTemplate jdbc = new JdbcTemplate(c);
-        for (String db : showDatabases(jdbc)) {
-          Map<String, Object> tableMap = new HashMap<>();
-          dbMap.put(db.replaceAll("_test$", ""), tableMap);
-          
-          for (String table : showTables(jdbc, db)) {
-            tableMap.put(table, showTableSchema(jdbc, db, table));
-          }
+
+        for (String table : showTables(jdbc, dbName)) {
+          tableMap.put(table, showTableSchema(jdbc, dbName, table));
         }
       } finally {
         c.destroy();
       }
     }
-    
-    return dbMap;
+
+    return tableMap;
   }
 
-  String diffDb(String db, Map<String, TableSchema> expect, Map<String, TableSchema> actual) {
-    for (Map.Entry<String, TableSchema> entry : expect.entrySet()) {
-      TableSchema expectSchema = entry.getValue();
-      TableSchema actualSchema = (TableSchema) actual.get(entry.getKey());
-      if (actualSchema == null) {
-        return "table " + db + "." + entry.getKey() + " not found";
-      }
-
-      String diff = diffTable(db, entry.getKey(), expectSchema, actualSchema);
-      if (diff != null) return diff;
-    }
-    return null;
+  @RequestMapping(value = "/dbschema", method = RequestMethod.GET)
+  public Map<String, Object> getDbSchema(
+    @RequestParam Optional<String> configName,
+    @RequestParam Optional<String> dbName) {
+    return getDbSchema(configName.orElse(null), dbName.orElse(null));
   }
 
-  String diffTable(String db, String table, TableSchema expect, TableSchema actual) {
+  private List<String> diffTable(String table, TableSchema expect, TableSchema actual) {
+    List<String> diffs = new ArrayList<>();
     Map<String, TableField> expectFields = expect.getFields();
     Map<String, TableField> actualFields = actual.getFields();
 
     for (Map.Entry<String, TableField> entry : expectFields.entrySet()) {
       TableField expectField = entry.getValue();
       TableField actualField = actualFields.get(entry.getKey());
-      String field = "field " + db + "." + table + "." + entry.getKey();
-      
-      if (actualField == null) return field + " not found";
-      if (!expectField.type.equals(actualField.type)) return field + " type not match";
-      if (!expectField.key.equals(actualField.key)) return field + " key not match";
-      if (!expectField.def.equals(actualField.def)) return field + " default not match";
-      if (!expectField.extra.equals(actualField.extra)) return field + " extra not match";
+      String field = "field " + table + "." + entry.getKey();
+
+      if (actualField == null) {
+        diffs.add(field + " not found");
+      } else {
+        if (!expectField.type.equals(actualField.type)) diffs.add(field + " type not match");
+        if (!expectField.key.equals(actualField.key)) diffs.add(field + " key not match");
+        if (!expectField.def.equals(actualField.def)) diffs.add(field + " default not match");
+        if (!expectField.extra.equals(actualField.extra)) diffs.add(field + " extra not match");
+      }
     }
 
     List<TableIndex> expectIndexs = expect.getIndexs();
@@ -225,31 +222,32 @@ public class DbSchemaController {
       for (TableIndex actualIndex : actualIndexs) {
         if (expectIndex.equals(actualIndex)) found = true;
       }
-      if (!found) return "index " + db + "." + table + "." + expectIndex.toString() + " not found";
+      if (!found) diffs.add("index " + table + "." + expectIndex.toString() + " not found");
     }
 
-    return null;    
+    return diffs;
   }
 
   @RequestMapping(value = "/dbschema/diff", method = RequestMethod.PUT)
-  public String diffDbSchema(@RequestBody String body) {
-    Map<String, Map<String, TableSchema>> expectMap = JsonHelper.readValue(
-      body, new TypeReference<Map<String, Map<String, TableSchema>>>(){});
+  public String diffDbSchema(@RequestParam Optional<String> configName,
+                             @RequestParam Optional<String> dbName,
+                             @RequestBody String body) {
+    List<String> diffs = new ArrayList<>();
 
-    Map<String, Object> actualMap = getDbSchema();
+    Map<String, TableSchema> expectMap = JsonHelper.readValue(
+      body, new TypeReference<Map<String, TableSchema>>(){});
 
-    for (Map.Entry<String, Map<String, TableSchema>> entry : expectMap.entrySet()) {
-      Map<String, TableSchema> expectDbMap = entry.getValue();
+    Map<String, Object> actualMap = getDbSchema(configName.orElse(null), dbName.orElse(null));
+
+    for (Map.Entry<String, TableSchema> entry : expectMap.entrySet()) {
       @SuppressWarnings("unchecked")
-      Map<String, TableSchema> actualDbMap = (Map<String, TableSchema>)
-        actualMap.get(entry.getKey());
-      if (actualDbMap == null) return "db " + entry.getKey() + " not found";
+      TableSchema actualSchema = (TableSchema) actualMap.get(entry.getKey());
 
-      String diff = diffDb(entry.getKey(), expectDbMap, actualDbMap);
-      if (diff != null) return diff;
+      if (actualSchema == null) diffs.add("table " + entry.getKey() + " not found");
+      else diffs.addAll(diffTable(entry.getKey(), entry.getValue(), actualSchema));
     }
 
-    return "";
+    return String.join("\n", diffs);
   }
 
   @ExceptionHandler(RuntimeException.class)

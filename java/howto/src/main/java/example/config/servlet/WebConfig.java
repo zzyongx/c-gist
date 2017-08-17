@@ -19,7 +19,7 @@ import example.config.*;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan({ProjectInfo.API_PKG})
+@ComponentScan({"commons.spring.controller", ProjectInfo.API_PKG})
 public class WebConfig extends WebMvcConfigurerAdapter {
   @Override
   public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
