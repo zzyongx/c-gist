@@ -1,5 +1,6 @@
 package example.config;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Hashtable;
 import javax.management.ObjectName;
@@ -9,6 +10,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.jmx.export.annotation.AnnotationMBeanExporter;
@@ -115,7 +117,7 @@ public class RootConfig {
 
   // TAG:RememberMeService
   @Bean
-  public RedisRememberMeService rememberMeServices() {
+  public RedisRememberMeService rememberMeServices() throws IOException {
     RedisRememberMeService rms = new RedisRememberMeService(
       jedisPool(), env.getProperty("rest.tokenpool", ""),
       env.getProperty("rest.inner", Boolean.class, false),
@@ -123,6 +125,9 @@ public class RootConfig {
     rms.setCookiePrefix(env.getProperty("login.cookieprefix", ""));
     rms.setApiAuthDb(mainDaoConfig.mainDataSource(), env.getProperty("login.apiauth.sql"));
     rms.setPermException(env.getProperty("login.perm.exception"));
+
+    String keyFile = env.getProperty("login.cookie.keyfile");
+    if (keyFile != null) rms.setAesKey(new ClassPathResource(keyFile).getFile().getPath());
     return rms;
   }
 }

@@ -16,6 +16,7 @@ import org.springframework.security.authentication.RememberMeAuthenticationToken
 import org.springframework.security.web.authentication.RememberMeServices;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Jedis;
+import commons.utils.AesHelper;
 import commons.utils.HttpHelper;
 import commons.utils.StringHelper;
 import commons.utils.Tuple2;
@@ -462,7 +463,10 @@ public class RedisRememberMeService implements RememberMeServices {
   private DataSource dataSource;
   private String     apiAuthSql;
 
-  private static final String KEY_PREFIX   = "RedisRMS_";
+  private AesHelper  aesHelper = null;
+
+  private static final String KEY_PREFIX    = "RedisRMS_";
+  private static final String ENCKEY_PREFIX = "RedisEncRMS_";
   private static int configGrantPermId = -1;
   private static boolean configRevokePermStrict = true;
   private static Map<Long, List<Tuple2<Boolean, Long>>> configPermException = new HashMap<>();
@@ -574,6 +578,12 @@ public class RedisRememberMeService implements RememberMeServices {
     }
   }
 
+  public void setAesKey(String keyFile) {
+    if (keyFile != null && !keyFile.isEmpty()) {
+      aesHelper = new AesHelper(keyFile);
+    }
+  }
+
   private String cookieKey(String key) {
     return cookiePrefix.isEmpty() ? key : cookiePrefix + "_" + key;
   }
@@ -595,11 +605,24 @@ public class RedisRememberMeService implements RememberMeServices {
   }
 
   private String cacheKey(long uid) {
-    return KEY_PREFIX + String.valueOf(uid);
+    return cacheKey(String.valueOf(uid));
   }
 
   private String cacheKey(String uid) {
-    return KEY_PREFIX + uid;
+    if (aesHelper == null) return KEY_PREFIX + uid;
+    else return ENCKEY_PREFIX + uid;
+  }
+
+  private String cacheValue(String value) {
+    if (aesHelper == null) return value;
+    else return aesHelper.encrypt(value);
+  }
+
+  private String valueFromCache(String cache) {
+    if (cache == null || cache.isEmpty()) return cache;
+
+    if (aesHelper == null) return cache;
+    else return aesHelper.decrypt(cache);
   }
 
   private String cacheApiKey(String uid) {
@@ -615,14 +638,15 @@ public class RedisRememberMeService implements RememberMeServices {
 
     try (Jedis c = jedisPool.getResource()) {
       String key = cacheKey(cacheEntity.uid);
-      String token = c.get(key);
+      String token = valueFromCache(c.get(key));
       if (token != null && !relogin) {
         String parts[] = token.split(":");
         if (parts.length >= 2) {
           cacheEntity.token = parts[1];
         }
       }
-      c.setex(cacheKey(cacheEntity.uid), maxAge, cacheEntity.toString());
+      c.setex(cacheKey(cacheEntity.uid), maxAge, cacheValue(cacheEntity.toString()));
+
     }
 
     String token = cacheEntity.getCookieToken();
@@ -672,13 +696,13 @@ public class RedisRememberMeService implements RememberMeServices {
 
     try (Jedis c = jedisPool.getResource()) {
       String key = cacheKey(user.getId());
-      cacheEntity = CacheEntity.buildFromString(c.get(key));
+      cacheEntity = CacheEntity.buildFromString(valueFromCache(c.get(key)));
       if (cacheEntity == null) return false;
 
       cacheEntity.name  = user.getName();
       cacheEntity.incId = user.getIncIdString();
       cacheEntity.perms = user.getPermsString();
-      c.setex(key, maxAge, cacheEntity.toString());
+      c.setex(key, maxAge, cacheValue(cacheEntity.toString()));
     }
 
     return true;
@@ -688,7 +712,7 @@ public class RedisRememberMeService implements RememberMeServices {
     if (suId != null && !suId.isEmpty() && user != null) {
       if (configSuPermId > 0 && user.canSu(configSuPermId)) {
         try (Jedis c = jedisPool.getResource()) {
-          CacheEntity cacheEntity = CacheEntity.buildFromString(c.get(cacheKey(suId)));
+          CacheEntity cacheEntity = CacheEntity.buildFromString(valueFromCache(c.get(cacheKey(suId))));
           return cacheEntity == null ? null : cacheEntity.toUser();
         }
       } else {
@@ -708,7 +732,7 @@ public class RedisRememberMeService implements RememberMeServices {
 
     CacheEntity cacheEntity = null;
     try (Jedis c = jedisPool.getResource()) {
-      cacheEntity = CacheEntity.buildFromString(c.get(key));
+      cacheEntity = CacheEntity.buildFromString(valueFromCache(c.get(key)));
     }
 
     if (cacheEntity == null) return null;
@@ -719,7 +743,7 @@ public class RedisRememberMeService implements RememberMeServices {
 
     if (cacheEntity.beforeExpire(maxAge)) {
       try (Jedis c = jedisPool.getResource()) {
-        c.setex(key, maxAge, cacheEntity.toString());
+        c.setex(key, maxAge, cacheValue(cacheEntity.toString()));
       }
     }
 
