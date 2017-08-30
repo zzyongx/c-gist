@@ -25,7 +25,7 @@
 (setq org-startup-folded 'showall)
 (setq
  org-link-abbrev-alist
- '(("blog" . "http://zzyongx.github.io/blogs/%s.html")))
+ '(("blog" . "https://zzyongx.github.io/blogs/%s.html")))
 
 (setq
  org-publish-project-alist
@@ -39,5 +39,5 @@
 (setq org-confirm-babel-evaluate nil)
 
 (setq org-startup-truncated nil)
-	
+
 (provide 'init-org)
