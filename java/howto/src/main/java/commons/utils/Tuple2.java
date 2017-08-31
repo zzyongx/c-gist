@@ -7,4 +7,7 @@ public class Tuple2<First,Second> {
     this.f = f;
     this.s = s;
   }
+  public String toString() {
+    return f.toString() + ":" + s.toString();
+  }
 }
