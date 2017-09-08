@@ -263,7 +263,7 @@
         <artifactId>findbugs-maven-plugin</artifactId>
         <version>3.0.3</version>
         <configuration>
-          <excludeFilterFile>findbugs-exclude.xml</excludeFilterFile>
+          <excludeFilterFile>src/findbugs/exclude.xml</excludeFilterFile>
         </configuration>
       </plugin>
     </plugins>

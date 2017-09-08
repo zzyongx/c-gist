@@ -8,6 +8,7 @@ package lib;
 /* we must provide a slf4j implement for jsonpath */
 @Grab('org.slf4j:slf4j-simple:1.7.16')
 @Grab('org.apache.httpcomponents:httpmime:4.5.2')
+@Grab('redis.clients:jedis:2.8.1')
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -27,6 +28,7 @@ import org.apache.http.entity.ContentType
 import org.apache.http.conn.EofSensorInputStream
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.PathNotFoundException
+import redis.clients.jedis.Jedis
 
 class JsonReader {
   def ctx
@@ -361,6 +363,13 @@ class BDD {
         db.execute(sql)
       }
     }
+  }
+
+  static JEDIS(def host = null, def port = null) {
+    if (host == null) host = DEVCFG().'redis.url'
+    if (port == null) port = Integer.parseInt(DEVCFG().'redis.port')
+
+    return new Jedis(host, port)
   }
 
   static STAT() {
