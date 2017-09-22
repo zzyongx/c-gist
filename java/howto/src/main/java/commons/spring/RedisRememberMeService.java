@@ -25,6 +25,7 @@ public class RedisRememberMeService implements RememberMeServices {
   public static class UserPerm {
     private String entity;
     private long   permId;
+    private int    flag = 0;
 
     public static UserPerm fromString(String perm) {
       String part[] = perm.split(":");
@@ -45,8 +46,13 @@ public class RedisRememberMeService implements RememberMeServices {
     }
 
     public UserPerm(String entity, long permId) {
+      this(entity, permId, 0);
+    }
+
+    public UserPerm(String entity, long permId, int flag) {
       this.entity = entity;
       this.permId = permId;
+      this.flag = flag;
     }
 
     public void setEntity(String entity) {
@@ -61,6 +67,13 @@ public class RedisRememberMeService implements RememberMeServices {
     }
     public long getPermId() {
       return permId;
+    }
+
+    public void setFlag(int flag) {
+      this.flag = flag;
+    }
+    public int getFlag() {
+      return this.flag;
     }
 
     public boolean entityEqual(String entity) {
@@ -167,6 +180,7 @@ public class RedisRememberMeService implements RememberMeServices {
     private boolean          internal  = false;
     private boolean          api       = false;
     private boolean          anonymous = false;
+    private User             origin    = null;
 
     public static User internal() {
       User user = new User(0, "__", 0, Arrays.asList(new UserPerm(1L)));
@@ -352,6 +366,13 @@ public class RedisRememberMeService implements RememberMeServices {
       return entitys;
     }
 
+    public void setOrigin(User origin) {
+      this.origin = origin;
+    }
+    public User getOrigin() {
+      return this.origin;
+    }
+
     public String getPermsString() {
       if (perms == null) return "";
 
@@ -430,7 +451,12 @@ public class RedisRememberMeService implements RememberMeServices {
       return String.join(":", uid, token, name, createAt, incId, perms);
     }
 
+
     public User toUser() {
+      return toUser(null);
+    }
+
+    public User toUser(User origin) {
       int userIncId = Integer.MIN_VALUE;
       List<UserPerm> userPerms = null;
 
@@ -443,11 +469,15 @@ public class RedisRememberMeService implements RememberMeServices {
         }
       }
 
+      User user;
       if (uid.indexOf('_') != -1) {
-        return new User(uid, name, userIncId, userPerms);
+        user = new User(uid, name, userIncId, userPerms);
       } else {
-        return new User(Long.parseLong(uid), name, userIncId, userPerms);
+        user = new User(Long.parseLong(uid), name, userIncId, userPerms);
       }
+
+      user.setOrigin(origin);
+      return user;
     }
   }
 
@@ -588,7 +618,7 @@ public class RedisRememberMeService implements RememberMeServices {
     return cookiePrefix.isEmpty() ? key : cookiePrefix + "_" + key;
   }
 
-  private Cookie newCookie(String key, String value, int maxAge, boolean httpOnly) {
+  public Cookie newCookie(String key, String value, int maxAge, boolean httpOnly) {
     return newCookie(key, value, maxAge, httpOnly, domain);
   }
   // the cookie's expire is controlled by server, not cookie's expire attribute
@@ -645,6 +675,7 @@ public class RedisRememberMeService implements RememberMeServices {
           cacheEntity.token = parts[1];
         }
       }
+      c.setex(KEY_PREFIX + cacheEntity.uid, maxAge, cacheEntity.toString());  // TODO: delete
       c.setex(cacheKey(cacheEntity.uid), maxAge, cacheValue(cacheEntity.toString()));
 
     }
@@ -702,6 +733,7 @@ public class RedisRememberMeService implements RememberMeServices {
       cacheEntity.name  = user.getName();
       cacheEntity.incId = user.getIncIdString();
       cacheEntity.perms = user.getPermsString();
+      c.setex(KEY_PREFIX + user.getId(), maxAge, cacheEntity.toString());  // TODO: delete
       c.setex(key, maxAge, cacheValue(cacheEntity.toString()));
     }
 
@@ -713,7 +745,7 @@ public class RedisRememberMeService implements RememberMeServices {
       if (configSuPermId > 0 && user.canSu(configSuPermId)) {
         try (Jedis c = jedisPool.getResource()) {
           CacheEntity cacheEntity = CacheEntity.buildFromString(valueFromCache(c.get(cacheKey(suId))));
-          return cacheEntity == null ? null : cacheEntity.toUser();
+          return cacheEntity == null ? null : cacheEntity.toUser(user);
         }
       } else {
         return null;
@@ -743,6 +775,7 @@ public class RedisRememberMeService implements RememberMeServices {
 
     if (cacheEntity.beforeExpire(maxAge)) {
       try (Jedis c = jedisPool.getResource()) {
+        c.setex(KEY_PREFIX + parts[0], maxAge, cacheEntity.toString());  // TODO: delete
         c.setex(key, maxAge, cacheValue(cacheEntity.toString()));
       }
     }
