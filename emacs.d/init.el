@@ -29,6 +29,7 @@
 (require 'init-scala)
 (require 'init-groovy)
 (require 'init-php)
+(require 'init-python)
 (require 'init-haskell)
 
 (require 'init-org)
