@@ -20,7 +20,7 @@ public class XssFilter implements Filter {
   public void init(FilterConfig arg) throws ServletException {
     // nothing to do
   }
-  
+
   public void destroy() {
     // nothing to do
   }
@@ -34,7 +34,7 @@ public class XssFilter implements Filter {
     if (method.equals("POST") || method.equals("PUT")) {
       reqWrap = new HttpServletRequestWrapImpl(req, ignoreKey);
     }
-    
+
     chain.doFilter(reqWrap, response);
   }
 
@@ -59,7 +59,7 @@ public class XssFilter implements Filter {
     @Override
     public String[] getParameterValues(String name) {
       String values[] = super.getParameterValues(name);
-      if (values == null || ignoreKey.contains(name)) {
+      if (values == null || ignoreKey.contains(name) || name.endsWith("_json")) {
         return values;
       } else {
         String newValues[] = new String[values.length];
@@ -71,4 +71,3 @@ public class XssFilter implements Filter {
     }
   }
 }
-
