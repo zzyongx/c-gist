@@ -1,12 +1,13 @@
 package commons.utils;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.lang.reflect.Method;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+import org.springframework.dao.DuplicateKeyException;
 
 public class MyBatisHelper {
-
   @SuppressWarnings("unchecked")
   public static <T> void registerEnumHandler(
     TypeHandlerRegistry register, Class handlerType, String packageName) {
@@ -40,5 +41,16 @@ public class MyBatisHelper {
 
     builder.append(")");
     return builder.toString();
+  }
+
+  public static <R> R catchDuplicateKey(Callable<R> callable, ApiResult rc) {
+    try {
+      return callable.call();
+    } catch (RuntimeException e) {
+      if (e.getClass().isAssignableFrom(DuplicateKeyException.class)) throw rc.toException();
+      else throw e;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

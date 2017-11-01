@@ -125,6 +125,7 @@ public class RootConfig {
     rms.setCookiePrefix(env.getProperty("login.cookieprefix", ""));
     rms.setApiAuthDb(mainDaoConfig.mainDataSource(), env.getProperty("login.apiauth.sql"));
     rms.setPermException(env.getProperty("login.perm.exception"));
+    rms.setSuPermId(env.getProperty("login.su", Integer.class, -1));
 
     String keyFile = env.getProperty("login.cookie.keyfile");
     if (keyFile != null) rms.setAesKey(new ClassPathResource(keyFile).getFile().getPath());

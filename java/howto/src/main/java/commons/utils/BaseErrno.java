@@ -2,7 +2,7 @@ package commons.utils;
 
 import org.jsondoc.core.annotation.*;
 
-@ApiObject(name = "Errno", description = "error code")
+@ApiObject(name = "BaseErrno", description = "error code")
 public class BaseErrno {
   @ApiObjectField(description = "0")
   public static final int OK                  = 0;

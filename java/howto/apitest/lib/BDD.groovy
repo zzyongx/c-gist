@@ -123,15 +123,14 @@ class BDD {
 
     def cookiep = env.'login.cookieprefix';
 
-    if (http.headers.cookie) {
-      if (cookiep != null) {
-        http.headers.cookie = http.headers.cookie.replace("token=", cookiep + "_token=");
-      }
-    } else {
-      cookie.each {key, value ->
-        def mkey = (key == "token" && cookiep != null) ? cookiep + "_token" : key;
-        http.headers["cookie"] = mkey + "=" + value
-      }
+    if (!http.headers.cookie) {
+      def cookies = []
+      cookie.each {key, value -> cookies.add("$key=$value")}
+      http.headers["cookie"] = String.join(";", cookies);
+    }
+    if (cookiep != null) {
+      http.headers.cookie = http.headers.cookie.replace("token=", cookiep + "_token=");
+      http.headers.cookie = http.headers.cookie.replace("suId=", cookiep + "_suId=");
     }
 
     URIBuilder reqUri = new URIBuilder(url)
@@ -334,11 +333,25 @@ class BDD {
     }
   }
 
+  static DB_NAME = null;
+  static DBCONFIG(def name) {
+    DB_NAME = name;
+  }
+
   /* all test database must have same password */
   static SQL(def mix, def closure = null) {
+    SQLP(mix, null, closure)
+  }
+
+  static SQLP(def mix, def list, def closure = null) {
+    def prefix = "";
+    if (DB_NAME != null) {
+      prefix = "${DB_NAME}."
+    }
+
     def cfg = SQL_CFG
-    def user = cfg.'jdbc.username'
-    def url = cfg.'jdbc.url'
+    def user = cfg."${prefix}jdbc.username"
+    def url = cfg."${prefix}jdbc.url"
     def sql
 
     if (mix instanceof Map) {
@@ -351,16 +364,18 @@ class BDD {
       sql = mix
     }
 
-    def password = cfg.'jdbc.password', driver = cfg.'jdbc.driver'
+    def password = cfg."${prefix}jdbc.password", driver = cfg.'jdbc.driver'
     println "DEBUG SQL: $sql"
 
     if (closure) {
       Sql.withInstance(url, user, password, driver) { db ->
-        db.eachRow(sql, closure)
+        if (list == null) db.eachRow(sql, closure)
+        else db.eachRow(sql, list, closure)
       }
     } else {
       Sql.withInstance(url, user, password, driver) { db ->
-        db.execute(sql)
+        if (list == null) db.execute(sql)
+        else db.execute(sql, list)
       }
     }
   }
