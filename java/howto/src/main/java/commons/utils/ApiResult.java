@@ -1,11 +1,13 @@
 package commons.utils;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.http.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import org.jsondoc.core.annotation.*;
+import org.springframework.http.CacheControl;
 import org.springframework.validation.*;
 import org.springframework.web.context.request.*;
 
@@ -27,6 +29,12 @@ public class ApiResult<Data> {
 
   public ApiResult(int code) {
     this(code, BaseErrno.getMessage(code));
+  }
+
+  public static HttpServletResponse getHttpServletRespons() {
+    HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+                                  .getRequestAttributes()).getRequest();
+    return (HttpServletResponse) request.getAttribute("response__");
   }
 
   private void setErrorHint() {
@@ -166,5 +174,14 @@ public class ApiResult<Data> {
   }
   public void setData(Data data) {
     this.data = data;
+  }
+
+  public ApiResult<Data> setCacheControl(int second) {
+    HttpServletResponse response = getHttpServletRespons();
+    if (response == null) return this;
+
+    CacheControl cc = CacheControl.maxAge(second, TimeUnit.SECONDS).cachePrivate();
+    response.setHeader("Cache-Control", cc.getHeaderValue());
+    return this;
   }
 }
