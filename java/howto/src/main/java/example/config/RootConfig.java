@@ -80,7 +80,8 @@ public class RootConfig {
       env.getRequiredProperty("redis.url"),
       env.getRequiredProperty("redis.port", Integer.class),
       200,  // default timeout 2000 millisecond is too long, set to 200
-      env.getProperty("redis.pass"));  // if null, ignore pass
+      env.getProperty("redis.pass"),  // if null, ignore pass
+      env.getProperty("redis.db", Integer.class, 0));
   }
 
   @Bean

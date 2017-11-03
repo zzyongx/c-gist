@@ -343,6 +343,10 @@ class BDD {
     SQLP(mix, null, closure)
   }
 
+  static SQLI(def mix, def list = null) {
+    SQLP(mix, list, "INSERT")
+  }
+
   static SQLP(def mix, def list, def closure = null) {
     def prefix = "";
     if (DB_NAME != null) {
@@ -368,9 +372,18 @@ class BDD {
     println "DEBUG SQL: $sql"
 
     if (closure) {
-      Sql.withInstance(url, user, password, driver) { db ->
-        if (list == null) db.eachRow(sql, closure)
-        else db.eachRow(sql, list, closure)
+      if ("INSERT".equals(closure)) {
+        def key
+        Sql.withInstance(url, user, password, driver) { db ->
+          if (list == null) key = db.executeInsert(sql)
+          else key = db.executeInsert(sql, list)
+        }
+        return key[0][0]
+      } else {
+        Sql.withInstance(url, user, password, driver) { db ->
+          if (list == null) db.eachRow(sql, closure)
+          else db.eachRow(sql, list, closure)
+        }
       }
     } else {
       Sql.withInstance(url, user, password, driver) { db ->
