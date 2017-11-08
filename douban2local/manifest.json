@@ -1,0 +1,37 @@
+{
+  "manifest_version": 2,
+
+  "name": "douban2local",
+  "description": "把豆瓣广播（包含图片）下载到本地",
+  "version": "1.0",
+
+  "page_action": {
+    "default_title": "下载豆瓣广播",
+    "default_icon": "images/icon.png",
+    "default_popup": "html/popup.html"
+  },
+
+  "icons": {
+    "48": "images/icon.png",
+    "128": "images/icon.png"
+  },
+
+  "background": {
+    "scripts": [
+      "js/background.js"
+    ],
+    "persistent": false
+  },
+
+  "content_scripts": [{
+    "matches": ["https://www.douban.com/people/zzyong/statuses*"],
+    "js": ["js/content.js"]
+  }],
+
+  "permissions": [
+    "activeTab",
+    "declarativeContent",
+    "storage",
+    "unlimitedStorage"
+  ]
+}
