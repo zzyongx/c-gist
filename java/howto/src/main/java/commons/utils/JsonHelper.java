@@ -3,6 +3,7 @@ package commons.utils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -94,8 +95,9 @@ public class JsonHelper {
   }
 
   public static <T> T readPath(JsonNode root, Class<T> rtype, Object ... paths) {
-    return readPath(root, rtype, paths);
+    return readPath(root, rtype, Arrays.asList(paths));
   }
+
   public static <T> T readPath(JsonNode root, Class<T> rtype, List<Object> paths) {
     for (Object path : paths) {
       if (path instanceof String) {
