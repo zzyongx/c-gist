@@ -231,6 +231,7 @@ public class DbSchemaController {
   @RequestMapping(value = "/dbschema/diff", method = RequestMethod.PUT)
   public String diffDbSchema(@RequestParam Optional<String> configName,
                              @RequestParam Optional<String> dbName,
+                             @RequestParam Optional<List<String>> ignoreTables,
                              @RequestBody String body) {
     List<String> diffs = new ArrayList<>();
 
@@ -240,6 +241,8 @@ public class DbSchemaController {
     Map<String, Object> actualMap = getDbSchema(configName.orElse(null), dbName.orElse(null));
 
     for (Map.Entry<String, TableSchema> entry : expectMap.entrySet()) {
+      if (ignoreTables.isPresent() && ignoreTables.get().indexOf(entry.getKey()) >= 0) continue;
+
       @SuppressWarnings("unchecked")
       TableSchema actualSchema = (TableSchema) actualMap.get(entry.getKey());
 

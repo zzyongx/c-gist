@@ -49,7 +49,7 @@ public class XssFilter implements Filter {
     @Override
     public String getParameter(String name) {
       String value = super.getParameter(name);
-      if (ignoreKey.contains(name)) {
+      if (ignoreKey.contains(name) || name.endsWith("_json")) {
         return value;
       } else {
         return XssHelper.escape(value);
