@@ -52,7 +52,7 @@ public class SlowLogInterceptor implements Interceptor {
       Method method = invocation.getMethod();
       String sql = getSql(method.getName(), invocation.getArgs());
       if (sql != null) {
-        logger.info("{} COMSUMES {}", sql, end - start);
+        logger.info("{} COMSUMES {}", sql.length() > 1024 ? sql.substring(0, 1024) : sql, end - start);
       }
     }
     return object;
