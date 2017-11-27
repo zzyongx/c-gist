@@ -20,48 +20,56 @@ import redis.clients.jedis.JedisPool;
 
 public class JedisCacheHelper {
   public static final Logger logger = LoggerFactory.getLogger(JedisCacheHelper.class);
+  private static final byte[] PH = new byte[] {'1'};
 
-  public static String buildCacheKey(String cachePrefix, List<Object> list) {
-    if (cachePrefix.startsWith(":") || list.isEmpty()) return cachePrefix;
-
+  public static String buildCacheField(List<Object> list) {
     try {
-      StringBuilder builder = new StringBuilder(cachePrefix);
+      StringBuilder builder = new StringBuilder();
+      boolean first = true;
       for (Object object : list) {
-        builder.append('-').append(object == null ? "" : object.toString());
+        if (!first) builder.append('-');
+        builder.append(object == null ? "" : object.toString());
+        first = false;
       }
       return builder.toString();
     } catch (Exception e) {   // object.toString() may throw
-      logger.warn("buildCacheKey {} throws {}", cachePrefix, Throwables.getStackTraceAsString(e));
+      logger.warn("buildCacheField throws {}", Throwables.getStackTraceAsString(e));
       return null;
     }
+  }
+
+  public static <R> R apply(
+    JedisPool pool, int expire, String cacheKey, Class<R> rtype, Supplier<R> supplier) {
+    return apply(pool, expire, cacheKey, null, rtype, supplier);
+  }
+
+  public static <R> List<R> applyList(
+    JedisPool pool, int expire, String cacheKey, Class<R> rtype, Supplier<List<R>> supplier) {
+    return applyList(pool, expire, cacheKey, null, rtype, supplier);
   }
 
   public static <R, T1> R apply(
     JedisPool pool, int expire, String cachePrefix, Class<R> rtype,
     Function<T1, R> f, T1 t1) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1));
-    return apply(pool, expire, cacheKey, rtype, () -> f.apply(t1));
+    return apply(pool, expire, cachePrefix, Arrays.asList(t1), rtype, () -> f.apply(t1));
   }
 
   public static <R, T1> List<R> applyList(
     JedisPool pool, int expire, String cachePrefix, Class<R> rtype,
     Function<T1, List<R>> f, T1 t1) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1));
-    return applyList(pool, expire, cacheKey, rtype, () -> f.apply(t1));
+    return applyList(pool, expire, cachePrefix, Arrays.asList(t1), rtype, () -> f.apply(t1));
   }
 
   public static <R, T1, T2> R apply(
     JedisPool jedisPool, int expire, String cachePrefix, Class<R> rtype,
     BiFunction<T1, T2, R> f, T1 t1, T2 t2) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1, t2));
-    return apply(jedisPool, expire, cacheKey, rtype, () -> f.apply(t1, t2));
+    return apply(jedisPool, expire, cachePrefix, Arrays.asList(t1, t2), rtype, () -> f.apply(t1, t2));
   }
 
   public static <R, T1, T2> List<R> applyList(
     JedisPool jedisPool, int expire, String cachePrefix, Class<R> rtype,
     BiFunction<T1, T2, List<R>> f, T1 t1, T2 t2) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1, t2));
-    return applyList(jedisPool, expire, cacheKey, rtype, () -> f.apply(t1, t2));
+    return applyList(jedisPool, expire, cachePrefix, Arrays.asList(t1, t2), rtype, () -> f.apply(t1, t2));
   }
 
   public static interface Function3<T1, T2, T3, R> {
@@ -71,15 +79,13 @@ public class JedisCacheHelper {
   public static <R, T1, T2, T3> R apply(
     JedisPool jedisPool, int expire, String cachePrefix, Class<R> rtype,
     Function3<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1, t2, t3));
-    return apply(jedisPool, expire, cacheKey, rtype, () -> f.apply(t1, t2, t3));
+    return apply(jedisPool, expire, cachePrefix, Arrays.asList(t1, t2, t3), rtype, () -> f.apply(t1, t2, t3));
   }
 
   public static <R, T1, T2, T3> List<R> applyList(
     JedisPool jedisPool, int expire, String cachePrefix, Class<R> rtype,
     Function3<T1, T2, T3, List<R>> f, T1 t1, T2 t2, T3 t3) {
-    String cacheKey = buildCacheKey(cachePrefix, Arrays.asList(t1, t2, t3));
-    return applyList(jedisPool, expire, cacheKey, rtype, () -> f.apply(t1, t2, t3));
+    return applyList(jedisPool, expire, cachePrefix, Arrays.asList(t1, t2, t3), rtype, () -> f.apply(t1, t2, t3));
   }
 
   private static <R> R bytesToObject(byte[] bytes, Class<R> rtype) {
@@ -122,22 +128,65 @@ public class JedisCacheHelper {
     return out.toByteArray();
   }
 
-  public static <R> R apply(JedisPool pool, int expire, String cacheKey, Class<R> rtype, Supplier<R> supplier) {
-    // build cache key fail, call data supplier
+  private static class CacheKey {
+    public byte[] mkey       = null;
+    public String mkeyString = null;
+
+    public byte[] key   = null;
+    public byte[] field = null;
+  }
+
+  private static CacheKey buildCacheKey(String cachePrefix, List<Object> args) {
+    if (cachePrefix.startsWith("#")) return null;
+
+    CacheKey cacheKey = new CacheKey();
+    if (cachePrefix.startsWith(":") || args == null) {
+      cacheKey.mkey = cachePrefix.getBytes(StandardCharsets.UTF_8);
+      cacheKey.mkeyString = cachePrefix;
+    } else {
+      String fieldStr = buildCacheField(args);
+      if (fieldStr == null) return null;
+
+      cacheKey.mkeyString = cachePrefix + "-" + fieldStr;
+      cacheKey.mkey = cacheKey.mkeyString.getBytes(StandardCharsets.UTF_8);
+
+      cacheKey.key   = cachePrefix.getBytes(StandardCharsets.UTF_8);
+      cacheKey.field = fieldStr.getBytes(StandardCharsets.UTF_8);
+    }
+
+    return cacheKey;
+  }
+
+  public static byte[] buildCacheKeyFromKeyField(byte[] key, byte[] field) {
+    int idx = 0;
+    byte[] mkey = new byte[key.length + field.length + 1];
+
+    for (int i = 0; i < key.length; ++i) mkey[idx++] = key[i];
+    mkey[idx++] = '-';
+    for (int i = 0; i < field.length; ++i) mkey[idx++] = field[i];
+
+    return mkey;
+  }
+
+  public static <R> R apply(JedisPool pool, int expire, String cachePrefix, List<Object> args,
+                            Class<R> rtype, Supplier<R> supplier) {
+    CacheKey cacheKey = buildCacheKey(cachePrefix, args);
     if (cacheKey == null) return supplier.get();
 
     byte[] value = null;
     try (Jedis c = pool.getResource()) {
-      value = c.get(cacheKey.getBytes(StandardCharsets.UTF_8));
+      value = c.get(cacheKey.mkey);
+
       if (value != null) {
         R r = bytesToObject(value, rtype);
-        logger.info("cache hits {}", cacheKey);
+        logger.debug("cache hits {}", cacheKey.mkeyString);
         return r;
       } else {
-        logger.info("cache miss {}", cacheKey);
+        if (cacheKey.key != null) c.hdel(cacheKey.key, cacheKey.field);
+        logger.debug("cache miss {}", cacheKey.mkeyString);
       }
     } catch (Exception e) {
-      logger.warn("getCache {} throws {}", cacheKey, Throwables.getStackTraceAsString(e));
+      logger.warn("getCache {} throws {}", cacheKey.mkeyString, Throwables.getStackTraceAsString(e));
     }
 
     R r = supplier.get();
@@ -145,30 +194,34 @@ public class JedisCacheHelper {
 
     try (Jedis c = pool.getResource()) {
       if (expire <= 0) expire = 864000;
-      c.setex(cacheKey.getBytes(StandardCharsets.UTF_8), expire, objectToBytes(r));
+      c.setex(cacheKey.mkey, expire, objectToBytes(r));
+
+      if (cacheKey.key != null) c.hset(cacheKey.key, cacheKey.field, PH);
     } catch (Exception e) {
-      logger.warn("setCache {} throws {}", cacheKey, Throwables.getStackTraceAsString(e));
+      logger.warn("setCache {} throws {}", cacheKey.mkeyString, Throwables.getStackTraceAsString(e));
     }
     return r;
   }
 
-  public static <R> List<R> applyList(JedisPool pool, int expire, String cacheKey, Class<R> rtype,
-                                      Supplier<List<R>> supplier) {
-    // build cache key fail, call data supplier
+  public static <R> List<R> applyList(JedisPool pool, int expire, String cachePrefix, List<Object> args,
+                                      Class<R> rtype, Supplier<List<R>> supplier) {
+    CacheKey cacheKey = buildCacheKey(cachePrefix, args);
     if (cacheKey == null) return supplier.get();
 
     byte[] value = null;
     try (Jedis c = pool.getResource()) {
-      value = c.get(cacheKey.getBytes(StandardCharsets.UTF_8));
+      value = c.get(cacheKey.mkey);
+
       if (value != null) {
         List<R> r = bytesToObjectList(value, rtype);
-        logger.info("cache hits {}", cacheKey);
+        logger.debug("cache hits {}", cacheKey.mkeyString);
         return r;
       } else {
-        logger.info("cache miss {}", cacheKey);
+        if (cacheKey.key != null) c.hdel(cacheKey.key, cacheKey.field);
+        logger.debug("cache miss {}", cacheKey.mkeyString);
       }
     } catch (Exception e) {
-      logger.warn("getCache {} throws {}", cacheKey, Throwables.getStackTraceAsString(e));
+      logger.warn("getCache {} throws {}", cacheKey.mkeyString, Throwables.getStackTraceAsString(e));
     }
 
     List<R> r = supplier.get();
@@ -176,9 +229,11 @@ public class JedisCacheHelper {
 
     try (Jedis c = pool.getResource()) {
       if (expire <= 0) expire = 864000;
-      c.setex(cacheKey.getBytes(StandardCharsets.UTF_8), expire, objectListToBytes(r, rtype));
+      c.setex(cacheKey.mkey, expire, objectListToBytes(r, rtype));
+
+      if (cacheKey.key != null) c.hset(cacheKey.key, cacheKey.field, PH);
     } catch (Exception e) {
-      logger.warn("setCache {} throws {}", cacheKey, Throwables.getStackTraceAsString(e));
+      logger.warn("setCache {} throws {}", cacheKey.mkeyString, Throwables.getStackTraceAsString(e));
     }
     return r;
   }

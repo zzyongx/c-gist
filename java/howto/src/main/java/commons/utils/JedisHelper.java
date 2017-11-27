@@ -1,5 +1,6 @@
 package commons.utils;
 
+import java.util.Map;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -34,11 +35,22 @@ public class JedisHelper {
     }
   }
 
-  public static void del(JedisPool pool, String key) {
+  public static void del(JedisPool pool, String ... keys) {
     try (Jedis c = pool.getResource()) {
-      c.del(key);
+      c.del(keys);
+    }
+  }
+
+  public static void del(JedisPool pool, byte[] ... keys) {
+    try (Jedis c = pool.getResource()) {
+      c.del(keys);
+    }
+  }
+
+  public static Map<byte[], byte[]> hgetAll(JedisPool pool, byte[] key) {
+    try (Jedis c = pool.getResource()) {
+      return c.hgetAll(key);
     }
   }
 
 }
-
