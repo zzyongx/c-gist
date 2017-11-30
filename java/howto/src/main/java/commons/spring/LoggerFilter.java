@@ -21,16 +21,13 @@ public class LoggerFilter implements Filter {
   private boolean logError;
 
   public LoggerFilter(Environment env) {
-    String def = "false";
-    if (env.acceptsProfiles("dev") || env.acceptsProfiles("test")) {
-      def = "true";
-    }
+    String def = "true";
 
     logHttpGet    = Boolean.parseBoolean(env.getProperty("logfilter.get", "false"));
     logHttpPost   = Boolean.parseBoolean(env.getProperty("logfilter.post", def));
     logHttpPut    = Boolean.parseBoolean(env.getProperty("logfilter.put", def));
     logHttpDelete = Boolean.parseBoolean(env.getProperty("logfilter.delete", def));
-    logError      = Boolean.parseBoolean(env.getProperty("logfilter.error", "true"));
+    logError      = Boolean.parseBoolean(env.getProperty("logfilter.error", def));
   }
 
   @ManagedAttribute(description="The logHttpGet Attribute", defaultValue="false")
