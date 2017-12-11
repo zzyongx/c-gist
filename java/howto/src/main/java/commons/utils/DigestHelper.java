@@ -40,6 +40,10 @@ public class DigestHelper {
     }
   }
 
+  public static String md5(String input) {
+    return md5(input.getBytes(charset));
+  }
+
   public static String hmacSHA1(String key, byte[] value) {
     try {
       byte[] keyBytes = key.getBytes(charset);
