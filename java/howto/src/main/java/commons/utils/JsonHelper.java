@@ -107,6 +107,7 @@ public class JsonHelper {
       } else {
         throw new IllegalArgumentException("unsupported paths type " + path.getClass());
       }
+      if (root == null) return null;
     }
     return cast(root, rtype);
   }

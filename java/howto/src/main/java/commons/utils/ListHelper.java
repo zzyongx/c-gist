@@ -58,4 +58,10 @@ public class ListHelper {
     for (E e : orders) array[i++] = map.get(e);
     return array;
   }
+
+  public static <T, R> List<R> map(List<T> list, Function<T, R> field) {
+    List<R> list2 = new ArrayList<>();
+    for (T e : list) list2.add(field.apply(e));
+    return list2;
+  }
 }

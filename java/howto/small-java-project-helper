@@ -103,8 +103,9 @@ sub init_project {
 
   # copy commons
   `cp -ar $gist/src/main/java/commons src/main/java`;
-  `rm -f  src/main/java/commons/spring/AnalogueJsonObjectFormatter.java`;
-  `rm -f  src/main/java/commons/spring/ListObjectHttpMessageConverter.java`;
+  unlink("src/main/java/commons/spring/AnalogueJsonObjectFormatter.java");
+  unlink("src/main/java/commons/spring/ListObjectHttpMessageConverter.java");
+  unlink("src/main/java/commons/utils/HdfsHelper.java");
 
   unless ($opt{withPatchca}) {
     `rm -f src/main/java/commons/saas/PatchcaService.java`;
@@ -194,6 +195,7 @@ sub copy_pom {
   unless ($opt{withPatchca}) {
     $c =~ s|<!--PATCHCA BEGIN-->.+<!--PATCHCA END-->||sg;
   }
+  $c =~ s|<!--HDFS BEGIN-->.+<!--HDFS END-->||sg;
   put_file_contents($dst, $c);
 }
 
