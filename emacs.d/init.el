@@ -2,6 +2,11 @@
 ;; ln -s PATH/.emacs.d ~/.emacs.d
 ;; mkdir ~/.emcas/site-lisp
 
+;; ielm
+;; describe-bindings # M-:
+;; apropos # symbol search
+;; C-x C-e eval elisp expression
+
 ;; (setq debug-on-error t)
 
 ;; eval-buffer
@@ -111,6 +116,17 @@
 (global-set-key [M-right] 'windmove-right)
 (global-set-key [M-up]    'windmove-up)
 (global-set-key [M-down]  'windmove-down)
+
+(defun other-window-backward (&optional n)
+  (interactive "P")
+  (other-window (- (prefix-numeric-value n))))
+
+(defun foo (string)
+  (interactive)
+  '(string))
+
+(global-set-key (kbd "C-x C-n") 'other-window)
+(global-set-key (kbd "C-x C-p") 'other-window-backward)
 
 ;; shell mode
 (autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)

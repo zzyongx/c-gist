@@ -4,6 +4,10 @@
 (define-key c-mode-base-map (kbd "RET") 'newline-and-indent)
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
+;; (add-hook 'find-file-hook 'flymake-find-file-hook)
+;; (global-set-key (kbd "M-g M-n") 'flymake-goto-next-error)
+;; (global-set-key (kbd "M-g M-p") 'flymake-goto-pre-error)
+
 (c-add-style "mycodingstyle"
              '((c-comment-only-line-offset . 0)
                (c-hanging-braces-alist . ((substatement-open before
