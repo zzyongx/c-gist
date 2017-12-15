@@ -18,6 +18,7 @@ my %route = (
 
 our $isWebInit    = 0x0001;
 our $isRootConfig = 0x0002;
+our $withMultiDb  = 0x0004;
 our $withSecurity = 0x0100;
 
 sub init_project {
@@ -27,6 +28,9 @@ sub init_project {
   my $dir = "$Bin/". $opt{artifactId};
   mkdir($dir);
   chdir($dir);
+
+  $withSecurity = 0 unless ($opt{withSecurity});
+  $withMultiDb  = 0 unless ($opt{withMultiDb});
 
   unless (-d ".c-gist") {
     system("git clone $GITHUB && mv c-gist .c-gist");
@@ -41,8 +45,10 @@ sub init_project {
   my ($pkg, $pkgDir) = pkg_info($opt{groupId}, $opt{artifactId});
   `mkdir -p src/main/java/$pkgDir`;
 
-  @dirFrame = ("entity", "manager", "api", "mapper", "mapper/main", "mapper/big",
+  @dirFrame = ("entity", "manager", "api", "mapper", "mapper/main",
                "model", "config", "config/servlet");
+  push(@dirFrame, "mapper/big") if ($opt{withMultiDb});
+
   foreach my $dir (@dirFrame) {
     mkdir("src/main/java/$pkgDir/$dir");
   }
@@ -62,38 +68,35 @@ sub init_project {
 
   copy_java($pkg, "$srcJavaDir/config/servlet/WebConfig.java",
             "$dstJavaDir/config/servlet/WebConfig.java");
-  copy_java($pkg, "$srcJavaDir/config/servlet/WebInitializer.java",
-            "$dstJavaDir/config/servlet/WebInitializer.java",
-            $opt{withSecurity} ? ($isWebInit | $withSecurity) : $isWebInit);
+  copy_java($pkg, "$srcJavaDir/config/servlet/WebInitializer.java", "$dstJavaDir/config/servlet/WebInitializer.java",
+
+            $isWebInit | $withSecurity | $withMultiDb);
 
   if ($opt{withSecurity}) {
-    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityConfig.java",
-              "$dstJavaDir/config/servlet/SecurityConfig.java");
-    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityInitializer.java",
-              "$dstJavaDir/config/servlet/SecurityInitializer.java");
+    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityConfig.java", "$dstJavaDir/config/servlet/SecurityConfig.java");
+    copy_java($pkg, "$srcJavaDir/config/servlet/SecurityInitializer.java", "$dstJavaDir/config/servlet/SecurityInitializer.java");
   }
 
   copy_java($pkg, "$srcJavaDir/config/BuildInApiConfig.java", "$dstJavaDir/config/BuildInApiConfig.java");
   copy_java($pkg, "$srcJavaDir/config/RootConfig.java", "$dstJavaDir/config/RootConfig.java",
-            $opt{withSecurity} ? ($isRootConfig | $withSecurity) : $isRootConfig);
+            $isRootConfig | $withSecurity);
   copy_java($pkg, "$srcJavaDir/config/DaoConfig.java", "$dstJavaDir/config/DaoConfig.java");
   copy_java($pkg, "$srcJavaDir/config/MainDaoConfig.java", "$dstJavaDir/config/MainDaoConfig.java");
-  copy_java($pkg, "$srcJavaDir/config/BigDaoConfig.java", "$dstJavaDir/config/BigDaoConfig.java");
 
-  copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java",
-                    "$dstJavaDir/config/ProjectInfo.java");
+  copy_project_info($pkg, "$srcJavaDir/config/ProjectInfo.java", "$dstJavaDir/config/ProjectInfo.java");
 
   copy_java($pkg, "$srcJavaDir/model/Errno.java", "$dstJavaDir/model/Errno.java");
 
   copy_java($pkg, "$srcJavaDir/api/MemoController.java", "$dstJavaDir/api/MemoController.java");
-  copy_java($pkg, "$srcJavaDir/api/EmployeeController.java",
-            "$dstJavaDir/api/EmployeeController.java");
+  copy_java($pkg, "$srcJavaDir/api/EmployeeController.java", "$dstJavaDir/api/EmployeeController.java");
 
   copy_java($pkg, "$srcJavaDir/manager/MemoManager.java", "$dstJavaDir/manager/MemoManager.java");
-  copy_java($pkg, "$srcJavaDir/mapper/main/EmployeeMapper.java",
-            "$dstJavaDir/mapper/main/EmployeeMapper.java");
-  copy_java($pkg, "$srcJavaDir/mapper/big/OpLogMapper.java",
-            "$dstJavaDir/mapper/big/OpLogMapper.java");
+  copy_java($pkg, "$srcJavaDir/mapper/main/EmployeeMapper.java", "$dstJavaDir/mapper/main/EmployeeMapper.java");
+
+  if ($opt{withMultiDb}) {
+    copy_java($pkg, "$srcJavaDir/config/BigDaoConfig.java", "$dstJavaDir/config/BigDaoConfig.java");
+    copy_java($pkg, "$srcJavaDir/mapper/big/OpLogMapper.java", "$dstJavaDir/mapper/big/OpLogMapper.java");
+  }
 
   copy_java($pkg, "$srcJavaDir/entity/Employee.java", "$dstJavaDir/entity/Employee.java");
 
@@ -108,12 +111,12 @@ sub init_project {
   unlink("src/main/java/commons/utils/HdfsHelper.java");
 
   unless ($opt{withPatchca}) {
-    `rm -f src/main/java/commons/saas/PatchcaService.java`;
-    `rm -f src/main/java/commons/utils/PatchcaHelper.java`;
+    unlink("src/main/java/commons/saas/PatchcaService.java");
+    unlink("src/main/java/commons/utils/PatchcaHelper.java");
   }
 
   put_file_contents(".gitignore", "target\n");
-  `rm -rf .c-gist`;
+#  `rm -rf .c-gist`;
 }
 
 sub coding_for_me {
@@ -213,6 +216,9 @@ sub copy_java {
       if (!($copyFlag & $withSecurity)) {
         $c =~ s/SecurityConfig.class,//g;
       }
+      if (!($copyFlag & $withMultiDb)) {
+        $c =~ s/BigDaoConfig.class,//g;
+      }
     }
 
     if ($copyFlag & $isRootConfig) {
@@ -244,7 +250,7 @@ sub help {
   }
   print {$fh} "$0 COMMAND [ARGS]\n";
   print {$fh} "COMMAND LIST\n";
-  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity --withPatchca\n";
+  print {$fh} "init --groupId=GROUP_ID --artifactId=ARTIFACT_ID --withSecurity --withPatchca --withMultiDb\n";
   print {$fh} "  $0 init --groupId=com.company --artifactId=sjp\n";
   print {$fh} "\n";
   print {$fh} "coding-for-me use `curl http://localhost/api/code/help` for help\n";

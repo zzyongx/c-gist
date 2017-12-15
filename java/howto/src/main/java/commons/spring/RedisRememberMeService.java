@@ -373,6 +373,11 @@ public class RedisRememberMeService implements RememberMeServices {
       return this.origin;
     }
 
+    public void removePerm() {
+      this.incId = -1;
+      this.perms = null;
+    }
+
     public String getPermsString() {
       if (perms == null) return "";
 
@@ -828,6 +833,11 @@ public class RedisRememberMeService implements RememberMeServices {
     if (user == null) return null;
 
     if (openId != null) user.setOpenId(openId);
+
+    // su user only allow get
+    if (user.getOrigin() != null && !request.getMethod().equals("GET")) {
+      user.removePerm();
+    }
 
     List<GrantedAuthority> grantedAuths = new ArrayList<>();
     if (user.getPerms() != null) {
