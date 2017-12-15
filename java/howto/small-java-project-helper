@@ -116,7 +116,7 @@ sub init_project {
   }
 
   put_file_contents(".gitignore", "target\n");
-#  `rm -rf .c-gist`;
+  `rm -rf .c-gist`;
 }
 
 sub coding_for_me {
