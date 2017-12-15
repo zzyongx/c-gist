@@ -22,7 +22,6 @@ import example.mapper.big.*;
 @RequestMapping("/api")
 public class EmployeeController {
   @Autowired EmployeeMapper employeeMapper;
-  @Autowired OpLogMapper    opLogMapper;
   @Autowired @Qualifier("mainTransactionTemplate")
   SimpleTransactionTemplate stt;
 
@@ -92,7 +91,6 @@ public class EmployeeController {
     long id = stt.call(() -> insertEmployeeInTrans(employee));
     employee.setId(id);
 
-    opLogMapper.add(id, "add");
     return new ApiResult<Employee>(employee);
   }
 
