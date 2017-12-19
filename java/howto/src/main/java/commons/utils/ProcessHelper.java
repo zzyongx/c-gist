@@ -22,8 +22,12 @@ public class ProcessHelper {
   }
 
   public static void logError(String command, int code, Process p) throws IOException {
-    logger.error("exec {} exit == {} STDERR {}", command, code,
-                 StreamUtils.copyToString(p.getErrorStream(), StandardCharsets.UTF_8));
+    if (code == 0) {
+      logger.info("exec {} exit = {}", command, code);
+    } else {
+      logger.error("exec {} exit = {} STDERR {}", command, code,
+                   StreamUtils.copyToString(p.getErrorStream(), StandardCharsets.UTF_8));
+    }
   }
 
   // WARNING: IF stderr too large (LINUX 65536), exec may block
@@ -54,11 +58,11 @@ public class ProcessHelper {
 
       p.waitFor();
       code = p.exitValue();
+
+      logError(command, code, p);
+
       if (code == 0 || ignoreExitValue) {
-        logger.info("exec {} exit = {}", command, code);
-        return objs;
-      } else {
-        logError(command, code, p);
+        return code != 0 && objs.isEmpty() ? null : objs;
       }
     } catch (Exception e) {
       logger.error("exec {} exit == {} EXCEPTION {}", command, code, e);
@@ -87,11 +91,10 @@ public class ProcessHelper {
 
       p.waitFor();
       code = p.exitValue();
+      logError(command, code, p);
+
       if (code == 0 || ignoreExitValue) {
-        logger.info("exec {} exit = {}", command, code);
-        return output;
-      } else {
-        logError(command, code, p);
+        return code != 0 && output.isEmpty() ? null : output;
       }
     } catch (Exception e) {
       logger.error("exec {} exit = {} EXCEPTION {}", command, code, e);

@@ -69,7 +69,6 @@ sub init_project {
   copy_java($pkg, "$srcJavaDir/config/servlet/WebConfig.java",
             "$dstJavaDir/config/servlet/WebConfig.java");
   copy_java($pkg, "$srcJavaDir/config/servlet/WebInitializer.java", "$dstJavaDir/config/servlet/WebInitializer.java",
-
             $isWebInit | $withSecurity | $withMultiDb);
 
   if ($opt{withSecurity}) {
