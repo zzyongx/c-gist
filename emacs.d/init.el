@@ -26,6 +26,7 @@
 (require 'init-cedet)
 (require 'init-ecb)
 (require 'init-yasnippet)
+(require 'init-imenu)
 (require 'java-mode-indent-annotations)
 (require 'init-cc)
 (require 'init-perl)
