@@ -1,8 +1,9 @@
 (require-package 'imenu-list)
+
 (setq imenu-list-focus-after-activation t)
 (setq imenu-list-position 'left)
 (setq imenu-list-auto-resize t)
-(setq imenu-list-size 0.25)
+(setq imenu-list-size 0.40)
 ;; (imenu-list-minor-mode)
 
 ;; <enter>: goto entry under cursor, or toggle case-folding.

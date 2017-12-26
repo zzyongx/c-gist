@@ -27,7 +27,30 @@
 
 ;; java mode
 (add-hook 'java-mode-hook
-          (lambda ()
-            (java-mode-indent-annotations-setup)))
+          '(lambda ()
+            (java-mode-indent-annotations-setup)
+            (setq compile-command "mvnrootcompile"))
+)
+
+;; compile window position
+(defadvice compile (around split-horizontally activate)
+  (let ((split-height-threshold 0)
+        (split-width-threshold nil))
+    ad-do-it))
+
+(defun compilation-exit-autoclose (status code msg)
+  ;; If M-x compile exists with a 0
+  (when (and (eq status 'exit) (zerop code))
+    ;; then bury the *compilation* buffer, so that C-x b doesn't go there
+    (bury-buffer)
+    ;; and delete the *compilation* window
+    (delete-window (get-buffer-window (get-buffer "*compilation*"))))
+  ;; Always return the anticipated result of compilation-exit-message-function
+  (cons msg code))
+
+;; Specify my function (maybe I should have done a lambda function)
+(setq compilation-exit-message-function 'compilation-exit-autoclose)
+
+;; C-x k  kill buffer
 
 (provide 'init-cc)
