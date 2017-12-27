@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for i in `seq 1 20`; do
+  if test -f Makefile; then
+    make
+    exit $?
+  fi
+  cd ..
+done
+pwd

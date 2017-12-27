@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for i in `seq 1 20`; do
+  if test -f pom.xml; then
+    mvn compile
+    exit $?
+  fi
+  cd ..
+done
+pwd

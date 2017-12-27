@@ -23,13 +23,15 @@
           '(lambda()
              (c-set-style "mycodingstyle")
              (setq tab-width 2)
-             (setq c-basic-offset tab-width)))
+             (setq c-basic-offset tab-width)
+             (setq compile-command "make-c"))
+          )
 
 ;; java mode
 (add-hook 'java-mode-hook
           '(lambda ()
             (java-mode-indent-annotations-setup)
-            (setq compile-command "mvnrootcompile"))
+            (setq compile-command "make-java"))
 )
 
 ;; compile window position

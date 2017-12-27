@@ -9,6 +9,17 @@
 
 ;; (setq debug-on-error t)
 
+;; C-M-n forward-list Move forward over a parenthetical group
+;; C-M-p backward-list Move backward over a parenthetical group
+;; C-M-f forward-sexp Move forward over a balanced expression
+;; C-M-b backward-sexp Move backward over a balanced expression
+;; C-M-k kill-sexp Kill balanced expression forward
+;; C-M-SPC mark-sexp Put the mark at the end of the sexp.
+
+;; env
+(setenv "PATH" (concat (file-name-directory user-init-file) "bin:" (getenv "PATH")))
+(setq startup-directory default-directory)
+
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'init-benchmarking)
@@ -41,6 +52,8 @@
 (require 'init-org)
 (require 'init-ox-reveal)
 (require 'init-dot)
+
+(require 'init-shell)
 
 ;; IDE
 (require 'init-ggtags)
@@ -129,16 +142,11 @@
 (global-set-key (kbd "C-x C-n") 'other-window)
 (global-set-key (kbd "C-x C-p") 'other-window-backward)
 
-;; shell mode
-(autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
-(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on t)
-
 ;; sh-mode
 (add-hook 'sh-mode-hook
           '(lambda()
              (setq sh-basic-offset 2)
-             (setq sh-indentation 2)
-             )
+             (setq sh-indentation 2))
           )
 
 (require-package 'sr-speedbar)
