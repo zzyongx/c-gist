@@ -1,0 +1,49 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]; then
+  echo "$0 rsync-server config-kafka-params"
+  echo "config-kafka params"
+  echo "  --broker-id=id default last ip segment"
+  echo "  --host-name=eth0"
+  echo "  --log-dirs=dirs, required"
+  echo "  --log-retention-hours=48"
+  echo "  --num-partitions=1"
+  echo "  --default-replication-factor=2"
+  echo "  --zookeeper-connect=zk,required"
+  echo "example $0 rsync.server::reop/kafka --log-dirs=/data0/kafka --zookeeper=zk1,zk2,zk3/kafka --num-partitions=3"
+  exit 1
+fi
+
+RSYNC=$1
+KAFKA_VER=2.11-1.0.0
+
+shift
+KAFKA_PARAMS=""
+for arg in "$@"; do
+  if echo $arg | grep -s 'log-dirs='; then
+    LOGDIR=$(echo $arg | cut -d'=' -f2)
+    mkdir -p $LOGDIR
+  fi
+
+  KAFKA_PARAMS="${KAFKA_PARAMS} $arg"
+done
+
+cd /opt
+
+if ! java -version; then
+  rsync $RSYNC/jdk-8u121-linux-x64.rpm .
+  rpm -Uvh jdk-8u121-linux-x64.rpm
+  rm -f jdk-8u121-linux-x64.rpm
+fi
+
+rsync $RSYNC/kafka_${KAFKA_VER}.tgz .
+tar xzf kafka_${KAFKA_VER}.tgz kafka_${KAFKA_VER} && rm kafka_${KAFKA_VER}.tgz
+mv kafka_${KAFKA_VER} kafka
+
+rsync $RSYNC/server.properties.template .
+rsync $RSYNC/config-kafka .
+./config-kafka $KAFKA_PARAMS --template=server.properties.template > kafka/config/server.properties
+rm -f server.properties.template
+rm -f config-kafka
+
+/opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties

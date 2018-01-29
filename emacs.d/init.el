@@ -125,6 +125,10 @@
 ;; M-x org-version
 ;; M-x set-buffer-file-coding-system utf-8-unix
 
+;; space to tab/tab to space
+;; M-x tabify
+;; M-x untabify
+
 ;; move around window
 (global-set-key [M-left]  'windmove-left)
 (global-set-key [M-right] 'windmove-right)

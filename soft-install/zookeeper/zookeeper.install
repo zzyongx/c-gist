@@ -1,0 +1,38 @@
+#!/bin/bash
+
+if [ $# != 3 ]; then
+  echo "$0 rsync-server cluster id"
+  echo "example: $0 rsync.server::reop/zookeeper server1,server2,server3 1"
+  exit 1
+fi
+
+RSYNC=$1
+CLUSTER=$2
+XID=$3
+
+ZKVER="3.4.11"
+
+if ! java -version; then
+  rsync $RSYNC/jdk-8u121-linux-x64.rpm .
+  rpm -Uvh jdk-8u121-linux-x64.rpm
+  rm -f jdk-8u121-linux-x64.rpm
+fi
+
+cd /opt
+test -d zookeeper && rm -rf zookeeper
+
+rsync $RSYNC/zookeeper-$ZKVER.tar.gz .
+tar xzf zookeeper-$ZKVER.tar.gz && rm zookeeper-$ZKVER.tar.gz
+mv zookeeper-$ZKVER zookeeper && cd zookeeper
+
+rsync $RSYNC/zoo.cfg conf/zoo.cfg
+
+IFS=',' read -r -a servers <<< "$CLUSTER"
+for index in "${!servers[@]}"; do
+  id=$((index+1))
+  echo "server.$id=${servers[index]}:1288:1388" >>conf/zoo.cfg
+done
+
+mkdir -p /var/lib/zookeeper
+echo $XID > /var/lib/zookeeper/myid
+/opt/zookeeper/bin/zkServer.sh start
