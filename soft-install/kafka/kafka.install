@@ -10,7 +10,7 @@ if [ $# -lt 2 ]; then
   echo "  --num-partitions=1"
   echo "  --default-replication-factor=2"
   echo "  --zookeeper-connect=zk,required"
-  echo "example $0 rsync.server::reop/kafka --log-dirs=/data0/kafka --zookeeper=zk1,zk2,zk3/kafka --num-partitions=3"
+  echo "example $0 rsync.server::reop/kafka --log-dirs=/data0/kafka --zookeeper-connect=zk1,zk2,zk3/kafka --num-partitions=3"
   exit 1
 fi
 
@@ -20,9 +20,10 @@ KAFKA_VER=2.11-1.0.0
 shift
 KAFKA_PARAMS=""
 for arg in "$@"; do
-  if echo $arg | grep -s 'log-dirs='; then
+  if echo $arg | grep -q 'log-dirs='; then
     LOGDIR=$(echo $arg | cut -d'=' -f2)
-    mkdir -p $LOGDIR
+    IFS=',' read -ra DIRS <<< "$LOGDIR"
+    for dir in "${DIRS[@]}"; do mkdir -p $dir; done
   fi
 
   KAFKA_PARAMS="${KAFKA_PARAMS} $arg"
