@@ -43,6 +43,7 @@
 (require 'init-perl)
 (require 'init-javascript)
 (require 'init-lua)
+(require 'init-golang)
 (require 'init-scala)
 (require 'init-groovy)
 (require 'init-php)
