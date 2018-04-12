@@ -40,7 +40,7 @@ sub getopt {
     'log-dirs'                   => undef,
     'log-retention-hours'        => 48,
     'num-partitions'             => 1,
-    'default-replication-factor' => 1,
+    'default-replication-factor' => 2,
     'zookeeper-connect'          => undef,
     'template'                   => undef,
   );

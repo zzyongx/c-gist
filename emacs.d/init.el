@@ -53,6 +53,7 @@
 (require 'init-org)
 (require 'init-ox-reveal)
 (require 'init-dot)
+(require 'init-yaml)
 
 (require 'init-shell)
 
