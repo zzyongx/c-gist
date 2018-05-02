@@ -32,7 +32,13 @@
           '(lambda ()
             (java-mode-indent-annotations-setup)
             (setq compile-command "make-java"))
-)
+          )
+
+;; go mode
+(add-hook 'go-mode-hook
+          '(lambda ()
+            (setq compile-command "make-go"))
+          )
 
 ;; compile window position
 (defadvice compile (around split-horizontally activate)

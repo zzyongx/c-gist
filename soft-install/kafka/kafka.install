@@ -47,4 +47,12 @@ rsync $RSYNC/config-kafka .
 rm -f server.properties.template
 rm -f config-kafka
 
+cat <<EOF >/opt/kafka/bin/mystart.sh
+export KAFKA_HEAP_OPTS="-Xmx8G -Xms8G"
+export KAFKA_JMX_OPTS="-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Djava.net.preferIPv4Stack=true"
+export JMX_PORT=19092
+
 /opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties
+EOF
+chmod a+x /opt/kafka/bin/mystart.sh
+/opt/kafka/bin/mystart.sh
