@@ -17,7 +17,7 @@ if ($regex) {
 
 foreach my $host (@hosts) {
   chomp $host;
-  next unless ($host ne "");
+  next if ($host eq "" || $host =~ /^#/);
 
   print "\@$host run $cmd\n";
   print "=" x 80, "\n";

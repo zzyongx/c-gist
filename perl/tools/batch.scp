@@ -18,7 +18,7 @@ if ($regex) {
 
 foreach my $host (@hosts) {
   chomp $host;
-  next unless ($host ne "");
+  next if ($host eq "" || $host =~ /^#/);
 
   my $cmd = "scp $srcf root\@$host:$dstf";
   print "=" x 80, "\n";
