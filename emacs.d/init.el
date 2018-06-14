@@ -24,6 +24,10 @@
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'init-benchmarking)
 
+;; case sensitive
+(setq case-fold-search nil)
+(setq case-replace nil)
+
 (require 'init-compat)
 (require 'init-utils)
 (require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
@@ -130,6 +134,9 @@
 ;; space to tab/tab to space
 ;; M-x tabify
 ;; M-x untabify
+
+;; search & replace
+;; M-x count-matches
 
 ;; move around window
 (global-set-key [M-left]  'windmove-left)
