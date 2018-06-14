@@ -490,8 +490,8 @@ public class RedisRememberMeService implements RememberMeServices {
   private boolean     tokenInnerOnly = false;
   private Set<String> anonymousPool = new HashSet<>();
   private JedisPool   jedisPool;
-  private String      domain;
   private int         maxAge;
+  private List<String> domains;
   private List<String> excludeDomains;
   private String       cookiePrefix = "";
 
@@ -544,7 +544,12 @@ public class RedisRememberMeService implements RememberMeServices {
 
     this.jedisPool = jedisPool;
 
-    this.domain = domain;
+    if (domain == null || domain.isEmpty()) {
+      this.domains = Arrays.asList("");
+    } else {
+      this.domains = Arrays.asList(domain.split(","));
+    }
+
     this.maxAge = maxAge;
 
     this.tokenInnerOnly = tokenInnerOnly;
@@ -623,20 +628,25 @@ public class RedisRememberMeService implements RememberMeServices {
     return cookiePrefix.isEmpty() ? key : cookiePrefix + "_" + key;
   }
 
-  public Cookie newCookie(String key, String value, int maxAge, boolean httpOnly) {
-    return newCookie(key, value, maxAge, httpOnly, domain);
+  public void addCookies(HttpServletResponse response, String key, String value, int maxAge, boolean httpOnly) {
+    addCookies(response, key, value, maxAge, httpOnly, domains);
   }
   // the cookie's expire is controlled by server, not cookie's expire attribute
-  private Cookie newCookie(String key, String value, int maxAge, boolean httpOnly, String domain) {
-    Cookie cookie = new Cookie(cookieKey(key), value);
-    cookie.setPath("/");
-    cookie.setDomain(domain);
+  private void addCookies(HttpServletResponse response, String key, String value, int maxAge, boolean httpOnly,
+                          List<String> domains) {
+    for (String domain : domains) {
+      Cookie cookie = new Cookie(cookieKey(key), value);
+      cookie.setPath("/");
 
-    // if maxAge > 0 ? cookie will be expired after 10 years.
-    cookie.setMaxAge(maxAge > 0 ? 86400 * 3650 : maxAge);
+      // Specifies those hosts to which the cookie will be sent. If not specified, defaults to the host portion of the current document location (but not including subdomains).
+      if (!domain.isEmpty()) cookie.setDomain(domain);
 
-    if (httpOnly) cookie.setHttpOnly(true);
-    return cookie;
+      // if maxAge > 0 ? cookie will be expired after 10 years.
+      cookie.setMaxAge(maxAge > 0 ? 86400 * 3650 : maxAge);
+
+      if (httpOnly) cookie.setHttpOnly(true);
+      response.addCookie(cookie);
+    }
   }
 
   private String cacheKey(long uid) {
@@ -689,30 +699,28 @@ public class RedisRememberMeService implements RememberMeServices {
 
     if (response != null) {
       // clear cookie must before set cookie
-      for (String excludeDomain : excludeDomains) {
-        logoutImpl(response, excludeDomain);
-      }
+      logoutImpl(response, excludeDomains);
 
-      response.addCookie(newCookie("uid", cacheEntity.uid, maxAge, false));
+      addCookies(response, "uid", cacheEntity.uid, maxAge, false);
       if (user.getOpenId() != null) {
-        response.addCookie(newCookie("openId", user.getOpenId(), maxAge, false));
+        addCookies(response, "openId", user.getOpenId(), maxAge, false);
       } else {
-        response.addCookie(newCookie("openId", null, 0, false));
+        addCookies(response, "openId", null, 0, false);
       }
-      response.addCookie(newCookie("token", token, maxAge, true));
+      addCookies(response, "token", token, maxAge, true);
     }
 
     return token;
   }
 
   private void logoutImpl(HttpServletResponse response) {
-    logoutImpl(response, domain);
+    logoutImpl(response, domains);
   }
 
-  private void logoutImpl(HttpServletResponse response, String domain) {
-    response.addCookie(newCookie("uid", null, 0, false, domain));
-    response.addCookie(newCookie("openId", null, 0, false, domain));
-    response.addCookie(newCookie("token", null, 0, true, domain));
+  private void logoutImpl(HttpServletResponse response, List<String> domains) {
+    addCookies(response, "uid", null, 0, false, domains);
+    addCookies(response, "openId", null, 0, false, domains);
+    addCookies(response, "token", null, 0, true, domains);
   }
 
   public void logout(String id, HttpServletResponse response, boolean all) {
