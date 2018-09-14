@@ -19,6 +19,7 @@
 ;; env
 (setenv "PATH" (concat (file-name-directory user-init-file) "bin:" (getenv "PATH")))
 (setq startup-directory default-directory)
+(setq warning-minimum-level :emergency)
 
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
@@ -30,16 +31,16 @@
 
 (require 'init-compat)
 (require 'init-utils)
-(require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
-(require 'init-elpa)      ;; Machinery for install required package
+;; disable auto package upgrade to speed up startup
+;; (require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
+;; (require 'init-elpa)      ;; Machinery for install required package
 
 (require-package 'wgrep)
-(require-package 'project-local-variables)
+(require-package 'magit)
 
 (require 'init-ido)
 (require 'init-auto-complete)
 (require 'init-cedet)
-(require 'init-ecb)
 (require 'init-yasnippet)
 (require 'init-imenu)
 (require 'java-mode-indent-annotations)
@@ -48,7 +49,6 @@
 (require 'init-javascript)
 (require 'init-lua)
 (require 'init-golang)
-(require 'init-scala)
 (require 'init-groovy)
 (require 'init-php)
 (require 'init-python)
@@ -169,12 +169,3 @@
 
 ;; diff
 (setq ediff-split-window-function 'split-window-horizontally)
-
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(font-lock-function-name-face ((t (:foreground "blue" :weight bold))))
- '(which-func ((t (:foreground "magenta")))))
-(put 'erase-buffer 'disabled nil)
