@@ -19,7 +19,7 @@
 ;; env
 (setenv "PATH" (concat (file-name-directory user-init-file) "bin:" (getenv "PATH")))
 (setq startup-directory default-directory)
-(setq warning-minimum-level :emergency)
+(setq warning-minimum-level :error)
 
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
@@ -32,8 +32,9 @@
 (require 'init-compat)
 (require 'init-utils)
 ;; disable auto package upgrade to speed up startup
-;; (require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
-;; (require 'init-elpa)      ;; Machinery for install required package
+(setq require-package-at-startup 0)
+(require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
+(require 'init-elpa)      ;; Machinery for install required package
 
 (require-package 'wgrep)
 (require-package 'magit)
@@ -67,6 +68,10 @@
 ;; line number
 (global-linum-mode t)
 (setq column-number-mode t)
+
+;; emacs 26.1
+;; (global-display-line-numbers-mode t)
+;; (setq display-line-numbers 'relative)
 
 ;; syntax on
 (global-font-lock-mode t)

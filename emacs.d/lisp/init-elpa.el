@@ -43,7 +43,9 @@
 
 ;;; On-demand installation of packages
 
-(defun require-package (package &optional min-version no-refresh)
+(setq require-package-at-startup 1)
+
+(defun require-package-impl (package &optional min-version no-refresh)
   "Install given PACKAGE, optionally requiring MIN-VERSION.
 If NO-REFRESH is non-nil, the available package lists will not be
 re-downloaded in order to locate PACKAGE."
@@ -53,8 +55,11 @@ re-downloaded in order to locate PACKAGE."
         (package-install package)
       (progn
         (package-refresh-contents)
-        (require-package package min-version t)))))
+        (require-package-impl package min-version t)))))
 
+(defun require-package (package &optional min-version no-refresh)
+  (when (eq 't require-package-at-startup)
+    (require-package-impl package min-version t)))
 
 (defun maybe-require-package (package &optional min-version no-refresh)
   "Try to install PACKAGE, and return non-nil if successful.
