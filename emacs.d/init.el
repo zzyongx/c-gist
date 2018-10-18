@@ -112,6 +112,7 @@
 ;; C-w kill region
 ;; M-w copy region
 ;; C-y yank
+;; C-x k kill buffer
 
 ;; C-x <SPC> rect-mark-mode
 ;; C-x r k   kill rect
