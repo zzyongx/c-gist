@@ -3,4 +3,8 @@
 (provide 'init-ox-reveal)
 (load-library "ox-reveal")
 ;; org 8.3+
-;; reveal js F fullscreen ESC quit/overview
+;; C-c C-e RR
+;; reveal js
+;; F fullscreen
+;; S speaker notes
+;; ESC quit/overview

@@ -33,7 +33,7 @@
             (java-mode-indent-annotations-setup)
             (setq compile-command "make-java"))
           )
-
+;; M-x compile
 ;; go mode
 (add-hook 'go-mode-hook
           '(lambda ()

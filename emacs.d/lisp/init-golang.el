@@ -8,6 +8,7 @@
 
 ;; godef-describe (C-c C-d) to describe expressions
 ;; godef-jump (C-c C-j) and godef-jump-other-window (C-x 4 C-c C-j) to jump to declarations
+;; C-u C-@ jump back to last position
 
 (add-hook 'before-save-hook #' gofmt-before-save)
 (provide 'init-golang)

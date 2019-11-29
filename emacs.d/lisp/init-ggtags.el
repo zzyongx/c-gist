@@ -8,4 +8,5 @@
 ;; should install gnu global first
 
 ;; M-.     skip to definition
+;; M-,     skip back
 ;; C-c M-p skip to last Mark

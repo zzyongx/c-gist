@@ -7,6 +7,7 @@
  '((dot . t)
    (perl . t)
    (java . t)
+   (go . t)
    (C . t)))
 
 ;; (require 'org)
