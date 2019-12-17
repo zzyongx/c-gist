@@ -28,48 +28,14 @@
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (add-to-list 'load-path (expand-file-name "repo" user-emacs-directory))
+
 (require 'init-benchmarking)
+;; Calls (package-initialize)
+(require 'init-elpa)      ;; Machinery for installing required packages
 
 ;; case sensitive
 (setq case-fold-search nil)
 (setq case-replace nil)
-
-;;(require 'init-compat)
-;;(require 'init-utils)
-
-;;(require 'init-utils)
-;; Calls (package-initialize)
-(require 'init-elpa)      ;; Machinery for installing required packages
-
-(require-package 'wgrep)
-(require-package 'magit)
-
-(require 'init-ido)
-(require 'init-auto-complete)
-(require 'init-cedet)
-(require 'init-yasnippet)
-(require 'init-imenu)
-(require 'java-mode-indent-annotations)
-(require 'init-cc)
-(require 'init-perl)
-(require 'init-javascript)
-(require 'init-typescript)
-(require 'init-lua)
-(require 'init-golang)
-(require 'init-groovy)
-(require 'init-php)
-(require 'init-python)
-(require 'init-haskell)
-
-(require 'init-org)
-(require 'init-ox-reveal)
-(require 'init-dot)
-(require 'init-yaml)
-
-(require 'init-shell)
-
-;; IDE
-(require 'init-ggtags)
 
 ;; line number
 (global-linum-mode t)
@@ -181,3 +147,36 @@
 
 ;; diff
 (setq ediff-split-window-function 'split-window-horizontally)
+
+;; modules
+(require-package 'wgrep)
+(require-package 'magit)
+
+;; (require 'init-compat)
+;; (require 'init-utils)
+(require 'init-ido)
+(require 'init-auto-complete)
+(require 'init-cedet)
+(require 'init-yasnippet)
+(require 'init-imenu)
+(require 'java-mode-indent-annotations)
+(require 'init-cc)
+(require 'init-perl)
+(require 'init-javascript)
+(require 'init-typescript)
+(require 'init-lua)
+(require 'init-golang)
+(require 'init-groovy)
+(require 'init-php)
+(require 'init-python)
+;; (require 'init-haskell)
+
+(require 'init-org)
+(require 'init-ox-reveal)
+(require 'init-dot)
+(require 'init-yaml)
+
+(require 'init-shell)
+
+;; IDE
+(require 'init-ggtags)
