@@ -1,6 +1,5 @@
 ;; usage
 ;; ln -s PATH/.emacs.d ~/.emacs.d
-;; mkdir ~/.emcas/site-lisp
 ;; emacs --version 26.3
 
 ;; ielm
@@ -35,14 +34,12 @@
 (setq case-fold-search nil)
 (setq case-replace nil)
 
-(require 'init-compat)
-(require 'init-utils)
+;;(require 'init-compat)
+;;(require 'init-utils)
 
-(require 'init-utils)
-(require 'init-site-lisp) ;; Must come before elpa, as it may provide package.el
+;;(require 'init-utils)
 ;; Calls (package-initialize)
 (require 'init-elpa)      ;; Machinery for installing required packages
-(require 'init-exec-path) ;; Set up $PATH
 
 (require-package 'wgrep)
 (require-package 'magit)

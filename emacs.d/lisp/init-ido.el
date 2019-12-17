@@ -7,9 +7,6 @@
 (setq ido-auto-merge-work-directories-length 0)
 (setq ido-use-virtual-buffers t)
 
-(when (maybe-require-package 'ido-ubiquitous)
-  (ido-ubiquitous-mode t))
-
 ;; Use smex to handle M-x
 (when (maybe-require-package 'smex)
   ;; Change path for ~/.smex-items
@@ -23,8 +20,5 @@
 
 ;; http://www.reddit.com/r/emacs/comments/21a4p9/use_recentf_and_ido_together/cgbprem
 (add-hook 'ido-setup-hook (lambda () (define-key ido-completion-map [up] 'previous-history-element)))
-
-
-
 
 (provide 'init-ido)
