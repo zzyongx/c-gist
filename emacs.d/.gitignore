@@ -1,4 +1,6 @@
 elpa
+elpa-*
+transient
 ac-comphist.dat
 auto-save-list
 ido.last

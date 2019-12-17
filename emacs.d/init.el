@@ -1,13 +1,18 @@
 ;; usage
 ;; ln -s PATH/.emacs.d ~/.emacs.d
 ;; mkdir ~/.emcas/site-lisp
+;; emacs --version 26.3
 
 ;; ielm
 ;; describe-bindings # M-:
 ;; apropos # symbol search
 ;; C-x C-e eval elisp expression
 
-;; (setq debug-on-error t)
+(let ((minver "26.3"))
+  (when (version< emacs-version minver)
+    (error "Your Emacs is too old -- this config requires v%s or higher" minver)))
+
+(setq debug-on-error t)
 
 ;; C-M-n forward-list Move forward over a parenthetical group
 ;; C-M-p backward-list Move backward over a parenthetical group
@@ -23,6 +28,7 @@
 
 ;; eval-buffer
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "repo" user-emacs-directory))
 (require 'init-benchmarking)
 
 ;; case sensitive
@@ -31,10 +37,12 @@
 
 (require 'init-compat)
 (require 'init-utils)
-;; disable auto package upgrade to speed up startup
-(setq require-package-at-startup 0)
-(require 'init-site-lisp) ;; Must come before elpa, as it provided package.el
-(require 'init-elpa)      ;; Machinery for install required package
+
+(require 'init-utils)
+(require 'init-site-lisp) ;; Must come before elpa, as it may provide package.el
+;; Calls (package-initialize)
+(require 'init-elpa)      ;; Machinery for installing required packages
+(require 'init-exec-path) ;; Set up $PATH
 
 (require-package 'wgrep)
 (require-package 'magit)
@@ -48,6 +56,7 @@
 (require 'init-cc)
 (require 'init-perl)
 (require 'init-javascript)
+(require 'init-typescript)
 (require 'init-lua)
 (require 'init-golang)
 (require 'init-groovy)
