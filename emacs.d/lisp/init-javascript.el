@@ -2,11 +2,11 @@
 ;;; Commentary:
 ;;; Code:
 
-(maybe-require-package 'json-mode)
-(maybe-require-package 'js2-mode)
-(maybe-require-package 'coffee-mode)
-(maybe-require-package 'typescript-mode)
-(maybe-require-package 'prettier-js)
+(require-package 'json-mode)
+(require-package 'js2-mode)
+(require-package 'coffee-mode)
+(require-package 'typescript-mode)
+(require-package 'prettier-js)
 
 ;; Need to first remove from list if present, since elpa adds entries too, which
 ;; may be in an arbitrary order

@@ -65,8 +65,6 @@
 
 ;; M-x delete-trailing-whitespace
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
-;; (add-hook 'c-mode-hook
-;;           (lambda () (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
 
 ;; imenu
 (global-set-key [(control c)(i)] 'imenu)
@@ -126,10 +124,6 @@
   (interactive "P")
   (other-window (- (prefix-numeric-value n))))
 
-(defun foo (string)
-  (interactive)
-  '(string))
-
 (global-set-key (kbd "C-x C-n") 'other-window)
 (global-set-key (kbd "C-x C-p") 'other-window-backward)
 
@@ -151,9 +145,10 @@
 ;; modules
 (require-package 'wgrep)
 (require-package 'magit)
+(require-package 'flycheck)
 
 ;; (require 'init-compat)
-;; (require 'init-utils)
+(require 'init-utils)
 (require 'init-ido)
 (require 'init-auto-complete)
 (require 'init-cedet)
@@ -180,3 +175,5 @@
 
 ;; IDE
 (require 'init-ggtags)
+
+;; eof

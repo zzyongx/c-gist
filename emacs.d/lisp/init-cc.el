@@ -1,6 +1,7 @@
 (require 'cc-mode)
 (setq-default c-basic-offset 2 c-default-style "linux")
-(setq-default tab-width 2 indent-tabs-mode t)
+(setq-default tab-width 2)
+
 (define-key c-mode-base-map (kbd "RET") 'newline-and-indent)
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
 
@@ -33,6 +34,7 @@
             (java-mode-indent-annotations-setup)
             (setq compile-command "make-java"))
           )
+
 ;; M-x compile
 ;; go mode
 (add-hook 'go-mode-hook
