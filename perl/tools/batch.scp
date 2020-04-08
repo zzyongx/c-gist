@@ -3,6 +3,9 @@
 use strict;
 use warnings;
 
+my $args = "";
+$args = $ENV{SSH_ARGS} if (exists $ENV{SSH_ARGS});
+
 my $hostf = shift or help();
 my $srcf  = shift or help();
 my $dstf  = shift or help();
@@ -20,7 +23,7 @@ foreach my $host (@hosts) {
   chomp $host;
   next if ($host eq "" || $host =~ /^#/);
 
-  my $cmd = "scp $srcf root\@$host:$dstf";
+  my $cmd = "scp -r $args $srcf root\@$host:$dstf";
   print "=" x 80, "\n";
   print $cmd, "\n";
   system($cmd);

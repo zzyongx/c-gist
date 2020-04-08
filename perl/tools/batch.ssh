@@ -3,6 +3,9 @@
 use strict;
 use warnings;
 
+my $args = "";
+$args = $ENV{SSH_ARGS} if (exists $ENV{SSH_ARGS});
+
 my $hostf = shift or help();
 my $cmd   = shift or help();
 my $regex = shift;
@@ -21,7 +24,7 @@ foreach my $host (@hosts) {
 
   print "\@$host run $cmd\n";
   print "=" x 80, "\n";
-  my $cmd = "ssh root\@$host '$cmd'";
+  my $cmd = "ssh $args root\@$host '$cmd'";
   system($cmd);
   print "=" x 80, "\n";
 }
