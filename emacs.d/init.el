@@ -164,7 +164,8 @@
 (require 'init-groovy)
 (require 'init-php)
 (require 'init-python)
-;; (require 'init-haskell)
+(require 'init-markdown)
+(require 'init-rust)
 
 (require 'init-org)
 (require 'init-ox-reveal)
@@ -177,3 +178,37 @@
 (require 'init-ggtags)
 
 ;; eof
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(comint-buffer-maximum-size 20000)
+ '(comint-completion-addsuffix t)
+ '(comint-get-old-input (lambda nil "") t)
+ '(comint-input-ignoredups t)
+ '(comint-input-ring-size 5000)
+ '(comint-move-point-for-output nil)
+ '(comint-prompt-read-only nil)
+ '(comint-scroll-show-maximum-output t)
+ '(comint-scroll-to-bottom-on-input t)
+ '(org-emphasis-alist
+   (quote
+    (("*" bold)
+     ("/" italic)
+     ("_" underline)
+     ("=" org-verbatim verbatim)
+     ("~" org-code verbatim)
+     ("+"
+      (:strike-through t)))))
+ '(package-selected-packages
+   (quote
+    (ggtags yaml-mode graphviz-dot-mode org-re-reveal htmlize rust-mode markdown-mode jedi elpy php-mode groovy-mode go-mode lua-mode add-node-modules-path skewer-mode js-comint prettier-js typescript-mode coffee-mode js2-mode json-mode imenu-list yasnippet auto-complete idomenu smex flycheck magit wgrep sr-speedbar gnu-elpa-keyring-update fullframe seq vue-mode rainbow-delimiters haskell-mode ac-js2)))
+ '(protect-buffer-bury-p nil)
+ '(tramp-default-method "ssh"))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
