@@ -1,0 +1,11 @@
+#!/bin/bash
+
+test $1 != "" || {
+  echo "usage: $0 file"
+  echo "example: $0 single_num"
+  exit 1
+}
+
+name=$(basename $1 .cc)
+g++ -o $name $name.cc -std=c++0x -g -Wall && ./$name
+test -f $name && rm $name
