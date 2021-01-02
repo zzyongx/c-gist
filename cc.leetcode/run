@@ -7,5 +7,7 @@ test $1 != "" || {
 }
 
 name=$(basename $1 .cc)
-g++ -o $name $name.cc -std=c++0x -g -Wall && ./$name
-test -f $name && rm $name
+(g++ -o $name $name.cc -std=c++0x -g -Wall && ./$name) && {
+  echo "OK"
+  test -f $name && rm $name
+}
