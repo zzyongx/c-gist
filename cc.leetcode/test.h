@@ -51,6 +51,12 @@ inline void freeListNode(ListNode *head) {
 }
 
 template <class T>
+T& vsort(T &v) {
+  std::sort(v.begin(), v.end());
+  return v;
+}
+
+template <class T>
 void fatal(const char *test, const T want, const T got) {
   std::cerr << test <<  " ERROR: want " << want
             << ", got " << got << std::endl;
@@ -64,6 +70,12 @@ void fatal(const char *test, const std::vector<T> &want, const std::vector<T> &g
   std::cerr << "\ngot\n";
   std::copy(got.begin(), got.end(), std::ostream_iterator<T>(std::cerr, sep));
   std::cerr << std::endl;
+  exit(1);
+}
+
+void fatal(const char *test, const bool want, const bool got) {
+  std::cerr << test <<  " ERROR: want " << (want ? "true" : "false")
+            << ", got " << (got ? "true" : "false") << std::endl;
   exit(1);
 }
 
