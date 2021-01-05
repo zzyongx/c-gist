@@ -57,6 +57,13 @@ T& vsort(T &v) {
 }
 
 template <class T>
+void echo(const char *test, const std::vector<T> &v, const char *sep = " ") {
+  std::cout << test << ": ";
+  std::copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout, sep));
+  std::cout << "\n";
+}
+
+template <class T>
 void fatal(const char *test, const T want, const T got) {
   std::cerr << test <<  " ERROR: want " << want
             << ", got " << got << std::endl;
