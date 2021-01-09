@@ -53,56 +53,115 @@ Constraints:
 #include "test.h"
 #include <cassert>
 #include <string>
+#include <vector>
 
 using namespace std;
 
-class Solution {
+// 回溯法不能解
+class Solution1 {
 public:
   bool isMatch(string s, string p) {
     size_t i = 0, j = 0;
-    size_t backTrackStart = 0;
-    while (i < s.size() && j < p.size()) {
-      if (s[i] == p[j] || p[j] == '.') {
-        i++;
-        if ((j+1 < p.size() && p[j+1] == '*')) {
-          if (p[j] == '.') i = s.size(); // ready to backtrace
-        } else {
-          backTrackStart = i;
-          j++;
+    size_t starLen = 0;
+    do {
+      if (i == s.size() && j == p.size()) {
+        break;
+      }
+
+      if (i < s.size() && j < p.size()) {
+        if (s[i] == p[j] || p[j] == '.') {
+          i++;
+
+          if ((j+1 < p.size() && p[j+1] == '*')) {
+            starLen++;
+          } else {
+            j++;
+            starLen = 0;
+          }
+          continue;
         }
+      }
+
+      // 不匹配，跳过通配
+      if (j+1 < p.size() && p[j+1] == '*') {
+        j+=2;
+        continue;
+      }
+
+      std::cout << "notmatch: " << s.substr(i) << " " << p.substr(j) << " " << starLen <<"\n";
+
+      // 不匹配 && 能够回溯
+      if (starLen > 0 && j < p.size()) {
+        p = p.substr(j);
+        for (size_t back = 1; back <= starLen; ++back) {
+          std::cout << "backtrace: " << s.substr(i-back) << " " << p << "\n";
+          if (isMatch(s.substr(i-back), p)) {
+            return true;
+          }
+        }
+        return false;
+      }
+      break;
+    } while (true);
+
+    // 未使用的通配符
+    if (j+1 < p.size() && p[j+1] == '*') {
+      j+=2;
+    }
+
+    return i == s.size() && j == p.size();
+  }
+};
+
+class Solution {
+public:
+  // dp[i,j] 表示 s[0:i] 和 p[0:j] 是否匹配
+  // 如果s[i] == p[j] || p[j] ==
+  struct PatternChar {
+    char c;
+    bool star;
+  };
+
+  bool isMatch(string s, string p) {
+    vector<PatternChar> pp;
+    for (size_t j = 0; j < p.size(); ++j) {
+      PatternChar pc = {.c = p[j], .star = false};
+      if (j + 1 < p.size() && p[j+1] == '*') {
+        pc.star = true;
+        ++j;
+      }
+      pp.push_back(pc);
+    }
+
+    size_t m = s.size();
+    size_t n = pp.size();
+    vector<vector<bool>> dp(m+1, vector<bool>(n+1));
+
+    dp[0][0] = true;
+    // dp[i][0] = false; 空模式不匹配任何串
+    // 空字符串匹配 .* x*
+    for (size_t j = 1; j < n+1; ++j) {
+      if (pp[j-1].star) {
+        dp[0][j] = true;
       } else {
-        if (j+1 < p.size() && p[j+1] == '*') {
-          j+=2;
+        break;
+      }
+    }
+
+    for (size_t i = 1; i < m+1; ++i) {
+      for (size_t j = 1; j < n+1; ++j) {
+        if (pp[j-1].star) {
+          auto match = (s[i-1] == pp[j-1].c || pp[j-1].c == '.');
+          dp[i][j] = (match && dp[i-1][j]) || dp[i][j-1];
+        } else if (s[i-1] == pp[j-1].c || pp[j-1].c == '.') {
+          dp[i][j] = dp[i-1][j-1];
         } else {
-          break;
+          dp[i][j] = false;
         }
       }
     }
 
-    std::cout << i << " " << j << "\n";
-
-    // backtrack .*
-    if (i == s.size() || (j+1 < p.size() && p[j+1] == '*')) {
-      if (j+1 < p.size() && p[j+1] == '*') j += 2;
-
-     std::cout << backTrackStart << "\n";
-        while (j < p.size() && backTrackStart < s.size()) {
-          std::cout << backTrackStart << "\n";
-          std::cout << s.substr(backTrackStart) << "\n";
-          std::cout << p.substr(j) << "\n\n";
-          if (isMatch(s.substr(backTrackStart), p.substr(j))) {
-            return true;
-          }
-
-          if (j+1 < p.size() && p[j+1] == '*') {
-            j+=2;
-          } else {
-            backTrackStart++;
-          }
-        }
-
-    }
-    return i == s.size() && j == p.size();
+    return dp[m][n];
   }
 };
 
@@ -216,10 +275,26 @@ int main() {
   }
 
   {
-    std::cout << "case16\n";
     auto match = solution.isMatch("abbbcd", "ab*bbbcd");
     if (!match) {
       fatal("case16", true, false);
+    }
+  }
+
+  {
+    auto match = solution.isMatch("aaba", "ab*a*c*a");
+    if (match) {
+      fatal("case17", false, true);
+    }
+  }
+
+  {
+    // 这个case说明只简单的回溯s不够，还得回溯p
+    // 这个case最后用到的p是 .b.*
+    auto match = solution.isMatch(
+      "bbcacbabbcbaaccabc", "b*a*a*.c*bb*b*.*.*");
+    if (!match) {
+      fatal("case18", true, false);
     }
   }
 }
