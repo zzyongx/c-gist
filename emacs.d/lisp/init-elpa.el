@@ -3,25 +3,22 @@
 ;;; Code:
 
 (require 'package)
+(require 'cl-lib)
 
 
 ;;; Install into separate package dirs for each Emacs version, to prevent bytecode incompatibility
-(let ((versioned-package-dir
-       (expand-file-name (format "elpa-%s.%s" emacs-major-version emacs-minor-version)
-                         user-emacs-directory)))
-  (setq package-user-dir versioned-package-dir))
+(setq package-user-dir
+      (expand-file-name (format "elpa-%s.%s" emacs-major-version emacs-minor-version)
+                        user-emacs-directory))
 
 
 
 ;;; Standard package repositories
 
-(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
-                    (not (gnutls-available-p))))
-       (proto (if no-ssl "http" "https")))
-  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
-  ;; Official MELPA Mirror, in case necessary.
-  ;;(add-to-list 'package-archives (cons "melpa-mirror" (concat proto "://www.mirrorservice.org/sites/melpa.org/packages/")) t)
-  )
+(add-to-list 'package-archives '( "melpa" . "https://melpa.org/packages/") t)
+;; Official MELPA Mirror, in case necessary.
+;(add-to-list 'package-archives (cons "melpa-mirror" (concat proto "://www.mirrorservice.org/sites/melpa.org/packages/")) t)
+
 
 
 ;; Work-around for https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341
@@ -31,8 +28,6 @@
 
 ;;; On-demand installation of packages
 
-(require 'cl-lib)
-
 (defun require-package (package &optional min-version no-refresh)
   "Install given PACKAGE, optionally requiring MIN-VERSION.
 If NO-REFRESH is non-nil, the available package lists will not be
@@ -40,7 +35,7 @@ re-downloaded in order to locate PACKAGE."
   (or (package-installed-p package min-version)
       (let* ((known (cdr (assoc package package-archive-contents)))
              (versions (mapcar #'package-desc-version known)))
-        (if (cl-find-if (lambda (v) (version-list-<= min-version v)) versions)
+        (if (cl-some (lambda (v) (version-list-<= min-version v)) versions)
             (package-install package)
           (if no-refresh
               (error "No version of %s >= %S is available" package min-version)
@@ -73,10 +68,14 @@ locate PACKAGE."
 (defvar sanityinc/required-packages nil)
 
 (defun sanityinc/note-selected-package (oldfun package &rest args)
-  "If OLDFUN reports PACKAGE was successfully installed, note it in `sanityinc/required-packages'."
+  "If OLDFUN reports PACKAGE was successfully installed, note that fact.
+The package name is noted by adding it to
+`sanityinc/required-packages'.  This function is used as an
+advice for `require-package', to which ARGS are passed."
   (let ((available (apply oldfun package args)))
-    (prog1 available
-      (when (and available (boundp 'package-selected-packages))
+    (prog1
+        available
+      (when available
         (add-to-list 'sanityinc/required-packages package)))))
 
 (advice-add 'require-package :around 'sanityinc/note-selected-package)
@@ -84,15 +83,17 @@ locate PACKAGE."
 (when (fboundp 'package--save-selected-packages)
   (require-package 'seq)
   (add-hook 'after-init-hook
-            (lambda () (package--save-selected-packages
-                   (seq-uniq (append sanityinc/required-packages package-selected-packages))))))
+            (lambda ()
+              (package--save-selected-packages
+               (seq-uniq (append sanityinc/required-packages package-selected-packages))))))
 
 
 (require-package 'fullframe)
 (fullframe list-packages quit-window)
 
 
-(require-package 'gnu-elpa-keyring-update)
+(let ((package-check-signature nil))
+  (require-package 'gnu-elpa-keyring-update))
 
 
 (defun sanityinc/set-tabulated-list-column-width (col-name width)
