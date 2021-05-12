@@ -14,7 +14,7 @@
     <mybatis.version>3.2.4</mybatis.version>
     <mysql-connector.version>8.0.16</mysql-connector.version>
     <spring.version>4.3.1.RELEASE</spring.version>
-    <spring-security.version>4.1.0.RELEASE</spring-security.version>
+    <spring-security.version>5.2.10.RELEASE</spring-security.version>
     <jetty.http.port>8888</jetty.http.port>
     <jackson.version>2.11.0</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
