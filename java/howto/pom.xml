@@ -12,7 +12,7 @@
   <properties>
     <java.version>1.8</java.version>
     <mybatis.version>3.2.4</mybatis.version>
-    <mysql-connector.version>8.0.16</mysql-connector.version>
+    <mysql-connector.version>8.0.28</mysql-connector.version>
     <spring.version>4.3.1.RELEASE</spring.version>
     <spring-security.version>5.2.10.RELEASE</spring-security.version>
     <jetty.http.port>8888</jetty.http.port>
