@@ -16,7 +16,7 @@
     <spring.version>5.2.21.RELEASE</spring.version>
     <spring-security.version>5.2.10.RELEASE</spring-security.version>
     <jetty.http.port>8888</jetty.http.port>
-    <jackson.version>2.11.0</jackson.version>
+    <jackson.version>2.12.6.1</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
